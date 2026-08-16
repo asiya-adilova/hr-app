@@ -32,7 +32,7 @@ export class AuthResponseDto {
   tokenType!: string;
 
   @ApiProperty({
-    example: '15m',
+    example: '1d',
     description: 'Срок действия access-токена',
   })
   expiresIn!: string;

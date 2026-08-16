@@ -19,7 +19,7 @@ import { RolesGuard } from './guards/roles.guard';
         secret: configService.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
           expiresIn: (configService.get<string>('JWT_EXPIRES_IN') ??
-            '15m') as `${number}${'s' | 'm' | 'h' | 'd'}`,
+            '1d') as `${number}${'s' | 'm' | 'h' | 'd'}`,
         },
       }),
     }),

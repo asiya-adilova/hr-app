@@ -38,7 +38,7 @@ export class SecurityService {
     this.accessSecret = configService.getOrThrow<string>('JWT_SECRET');
     this.refreshSecret = configService.getOrThrow<string>('JWT_REFRESH_SECRET');
     this.accessExpiresIn = (configService.get<string>('JWT_EXPIRES_IN') ??
-      '15m') as JwtExpiresIn;
+      '1d') as JwtExpiresIn;
     this.refreshExpiresIn = (configService.get<string>(
       'JWT_REFRESH_EXPIRES_IN',
     ) ?? '7d') as JwtExpiresIn;
