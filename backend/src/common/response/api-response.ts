@@ -1,9 +1,15 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ErrorCode } from '../enums/error-code.enum';
 import { ErrorInfo } from './error-info';
 
 export class ApiResponse<T = null> {
+  @ApiProperty({ example: true })
   successful: boolean;
+
+  @ApiPropertyOptional()
   data?: T;
+
+  @ApiPropertyOptional({ type: ErrorInfo })
   error?: ErrorInfo;
 
   private constructor(successful: boolean, data?: T, error?: ErrorInfo) {

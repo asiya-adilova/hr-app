@@ -1,35 +1,182 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateEmployeeDto } from './dto/create-employee.dto';
-import { UpdateEmployeeDto } from './dto/update-employee.dto';
-import { Prisma, type Employee } from '../../generated/prisma/client';
+import { CreateEmployeeDto } from './dto/request/create-employee-request.dto';
+import { UpdateEmployeeDto } from './dto/request/update-employee-request.dto';
+import { Prisma } from '../../generated/prisma/client';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { ServiceResult } from '../common/response/service-result';
 import { PagedResult } from '../common/response/paged-result';
-import { EmployeeFilterDto } from './dto/employee-filter.dto';
+import { EmployeeFilterDto } from './dto/request/employee-filter-request.dto';
 import { EmployeeFilterSort } from './dto/enums/employee-filter-sort.enum';
+import { EducationsService } from '../educations/educations.service';
+import { RelativesService } from '../relatives/relatives.service';
+import { WorkExperiencesService } from '../work-experiences/work-experiences.service';
+import {
+  EmployeeMapper,
+  employeeLookupInclude,
+  employeeTableInclude,
+  type EmployeeWithLookups,
+  type EmployeeWithTableReferences,
+} from './mappings/employee-mapper';
+import { EmployeeDetailsResponseDto } from './dto/response/employee-details-response.dto';
+import { EmployeeTableResponseDto } from './dto/response/employee-table-response.dto';
+import {
+  BaseService,
+  type SoftDeletable,
+} from '../common/services/base.service';
 
 @Injectable()
-export class EmployeesService {
-  constructor(private readonly prisma: PrismaService) {}
+export class EmployeesService extends BaseService<
+  SoftDeletable,
+  EmployeeDetailsResponseDto,
+  CreateEmployeeDto,
+  UpdateEmployeeDto,
+  EmployeeTableResponseDto
+> {
+  protected readonly notFoundMessage = 'Сотрудник не найден';
 
-  async getById(id: number): Promise<ServiceResult<Employee>> {
+  constructor(
+    prisma: PrismaService,
+    private readonly educationsService: EducationsService,
+    private readonly workExperiencesService: WorkExperiencesService,
+    private readonly relativesService: RelativesService,
+  ) {
+    super(prisma);
+  }
+
+  protected getDelegate() {
+    return this.prisma.employee;
+  }
+
+  protected getByIdInclude() {
+    return employeeLookupInclude;
+  }
+
+  protected getListInclude() {
+    return employeeTableInclude;
+  }
+
+  protected getDefaultOrderBy() {
+    return { createdAt: 'desc' as const };
+  }
+
+  protected toResponse(model: SoftDeletable): EmployeeDetailsResponseDto {
+    return EmployeeMapper.toDetailsResponse(
+      model as unknown as EmployeeWithLookups,
+      {
+        education: [],
+        workExperience: [],
+        relatives: [],
+      },
+    );
+  }
+
+  protected toListResponse(model: SoftDeletable): EmployeeTableResponseDto {
+    return EmployeeMapper.toTableResponse(
+      model as unknown as EmployeeWithTableReferences,
+    );
+  }
+
+  protected toCreateData(dto: CreateEmployeeDto) {
+    return {
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      middleName: dto.middleName,
+      birthDate: new Date(dto.birthDate),
+      pinfl: dto.pinfl,
+      passportSeries: dto.passportSeries,
+      passportNumber: dto.passportNumber,
+      passportIssueDate: new Date(dto.passportIssueDate),
+      passportIssuedBy: dto.passportIssuedBy,
+      phone: dto.phone,
+      email: dto.email,
+      address: dto.address,
+      employeeNumber: dto.employeeNumber,
+      hireDate: new Date(dto.hireDate),
+      genderId: dto.genderId,
+      citizenshipId: dto.citizenshipId,
+      nationalityId: dto.nationalityId,
+      departmentId: dto.departmentId,
+      positionId: dto.positionId,
+      employmentTypeId: dto.employmentTypeId,
+      educationLevelId: dto.educationLevelId,
+      maritalStatusId: dto.maritalStatusId,
+      driverLicenseCategoryId: dto.driverLicenseCategoryId,
+      totalExperienceMonths: dto.totalExperienceMonths,
+      specialtyExperienceMonths: dto.specialtyExperienceMonths,
+      militaryService: dto.militaryService,
+      hasDriverLicense: dto.hasDriverLicense,
+      additionalInfo: dto.additionalInfo,
+    };
+  }
+
+  protected toUpdateData(dto: UpdateEmployeeDto) {
+    return {
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      middleName: dto.middleName,
+      birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+      pinfl: dto.pinfl,
+      passportSeries: dto.passportSeries,
+      passportNumber: dto.passportNumber,
+      passportIssueDate: dto.passportIssueDate
+        ? new Date(dto.passportIssueDate)
+        : undefined,
+      passportIssuedBy: dto.passportIssuedBy,
+      phone: dto.phone,
+      email: dto.email,
+      address: dto.address,
+      employeeNumber: dto.employeeNumber,
+      hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
+      genderId: dto.genderId,
+      citizenshipId: dto.citizenshipId,
+      nationalityId: dto.nationalityId,
+      departmentId: dto.departmentId,
+      positionId: dto.positionId,
+      employmentTypeId: dto.employmentTypeId,
+      educationLevelId: dto.educationLevelId,
+      maritalStatusId: dto.maritalStatusId,
+      driverLicenseCategoryId: dto.driverLicenseCategoryId,
+      totalExperienceMonths: dto.totalExperienceMonths,
+      specialtyExperienceMonths: dto.specialtyExperienceMonths,
+      militaryService: dto.militaryService,
+      hasDriverLicense: dto.hasDriverLicense,
+      additionalInfo: dto.additionalInfo,
+    };
+  }
+
+  override async getById(
+    id: number,
+  ): Promise<ServiceResult<EmployeeDetailsResponseDto>> {
     const employee = await this.prisma.employee.findFirst({
-      where: { id, isDeleted: false },
+      where: { id },
+      include: employeeLookupInclude,
     });
 
     if (!employee) {
-      return ServiceResult.error(ErrorCode.NotFound, 'Сотрудник не найден');
+      return ServiceResult.error(ErrorCode.NotFound, this.notFoundMessage);
     }
 
-    return ServiceResult.success(employee);
+    const [education, workExperience, relatives] = await Promise.all([
+      this.educationsService.findByEmployeeId(id),
+      this.workExperiencesService.findByEmployeeId(id),
+      this.relativesService.findByEmployeeId(id),
+    ]);
+
+    return ServiceResult.success(
+      EmployeeMapper.toDetailsResponse(employee, {
+        education,
+        workExperience,
+        relatives,
+      }),
+    );
   }
 
   async filter(
     filter: EmployeeFilterDto,
     pageSize: number,
     pageIndex: number,
-  ): Promise<ServiceResult<PagedResult<Employee>>> {
+  ): Promise<ServiceResult<PagedResult<EmployeeTableResponseDto>>> {
     const skip = (pageIndex - 1) * pageSize;
 
     const where = this.buildEmployeeWhere(filter);
@@ -41,6 +188,7 @@ export class EmployeesService {
         skip,
         take: pageSize,
         orderBy,
+        include: employeeTableInclude,
       }),
 
       this.prisma.employee.count({
@@ -48,22 +196,91 @@ export class EmployeesService {
       }),
     ]);
 
-    const result = new PagedResult(employees, pageIndex, pageSize, totalCount);
+    const result = new PagedResult(
+      employees.map((employee) => EmployeeMapper.toTableResponse(employee)),
+      pageIndex,
+      pageSize,
+      totalCount,
+    );
 
     return ServiceResult.success(result);
   }
 
-  async create(dto: CreateEmployeeDto): Promise<ServiceResult<Employee>> {
+  override async create(
+    dto: CreateEmployeeDto,
+  ): Promise<ServiceResult<EmployeeDetailsResponseDto>> {
+    const uniquenessError = await this.findUniquenessError({
+      pinfl: dto.pinfl,
+      email: dto.email,
+      employeeNumber: dto.employeeNumber,
+    });
+
+    if (uniquenessError) {
+      return uniquenessError;
+    }
+
+    return super.create(dto);
+  }
+
+  override async update(
+    id: number,
+    dto: UpdateEmployeeDto,
+  ): Promise<ServiceResult<EmployeeDetailsResponseDto>> {
+    const currentEmployee = await this.prisma.employee.findFirst({
+      where: { id },
+    });
+
+    if (!currentEmployee) {
+      return ServiceResult.error(ErrorCode.NotFound, this.notFoundMessage);
+    }
+
+    const uniquenessError = await this.findUniquenessError(
+      {
+        pinfl: dto.pinfl,
+        email: dto.email,
+        employeeNumber: dto.employeeNumber,
+      },
+      id,
+    );
+
+    if (uniquenessError) {
+      return uniquenessError;
+    }
+
+    return super.update(id, dto);
+  }
+
+  private async findUniquenessError(
+    fields: {
+      pinfl?: string;
+      email?: string;
+      employeeNumber?: string;
+    },
+    excludeId?: number,
+  ): Promise<ServiceResult<EmployeeDetailsResponseDto> | null> {
+    const filters: Prisma.EmployeeWhereInput[] = [
+      ...(fields.pinfl ? [{ pinfl: fields.pinfl }] : []),
+      ...(fields.email ? [{ email: fields.email }] : []),
+      ...(fields.employeeNumber
+        ? [{ employeeNumber: fields.employeeNumber }]
+        : []),
+    ];
+
+    if (filters.length === 0) {
+      return null;
+    }
+
     const existingEmployees = await this.prisma.employee.findMany({
       where: {
-        OR: [
-          { pinfl: dto.pinfl },
-          ...(dto.email ? [{ email: dto.email }] : []),
-        ],
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+        OR: filters,
       },
     });
 
-    if (existingEmployees.some((employee) => employee.pinfl === dto.pinfl)) {
+    if (
+      fields.pinfl &&
+      existingEmployees.some((employee) => employee.pinfl === fields.pinfl)
+    ) {
       return ServiceResult.error(
         ErrorCode.DuplicateData,
         'Сотрудник с указанным ПИНФЛ уже существует',
@@ -71,8 +288,8 @@ export class EmployeesService {
     }
 
     if (
-      dto.email &&
-      existingEmployees.some((employee) => employee.email === dto.email)
+      fields.email &&
+      existingEmployees.some((employee) => employee.email === fields.email)
     ) {
       return ServiceResult.error(
         ErrorCode.DuplicateData,
@@ -80,142 +297,19 @@ export class EmployeesService {
       );
     }
 
-    const employee = await this.prisma.employee.create({
-      data: {
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        middleName: dto.middleName,
-
-        birthDate: new Date(dto.birthDate),
-
-        pinfl: dto.pinfl,
-
-        passportSeries: dto.passportSeries,
-        passportNumber: dto.passportNumber,
-        passportIssueDate: new Date(dto.passportIssueDate),
-        passportIssuedBy: dto.passportIssuedBy,
-
-        phone: dto.phone,
-        email: dto.email,
-        address: dto.address,
-
-        employeeNumber: dto.employeeNumber,
-        hireDate: new Date(dto.hireDate),
-
-        genderId: dto.genderId,
-        citizenshipId: dto.citizenshipId,
-        nationalityId: dto.nationalityId,
-        departmentId: dto.departmentId,
-        positionId: dto.positionId,
-        employmentTypeId: dto.employmentTypeId,
-        educationLevelId: dto.educationLevelId,
-        maritalStatusId: dto.maritalStatusId,
-        driverLicenseCategoryId: dto.driverLicenseCategoryId,
-
-        totalExperienceMonths: dto.totalExperienceMonths,
-        specialtyExperienceMonths: dto.specialtyExperienceMonths,
-
-        militaryService: dto.militaryService,
-        hasDriverLicense: dto.hasDriverLicense,
-
-        additionalInfo: dto.additionalInfo,
-      },
-    });
-
-    return ServiceResult.success(employee);
-  }
-
-  async update(
-    id: number,
-    dto: UpdateEmployeeDto,
-  ): Promise<ServiceResult<Employee>> {
-    const currentEmployee = await this.prisma.employee.findFirst({
-      where: { id, isDeleted: false },
-    });
-
-    if (!currentEmployee) {
-      return ServiceResult.error(ErrorCode.NotFound, 'Сотрудник не найден');
+    if (
+      fields.employeeNumber &&
+      existingEmployees.some(
+        (employee) => employee.employeeNumber === fields.employeeNumber,
+      )
+    ) {
+      return ServiceResult.error(
+        ErrorCode.DuplicateData,
+        'Сотрудник с указанным табельным номером уже существует',
+      );
     }
 
-    const uniquenessFilters = [
-      ...(dto.pinfl ? [{ pinfl: dto.pinfl }] : []),
-      ...(dto.email ? [{ email: dto.email }] : []),
-    ];
-
-    if (uniquenessFilters.length > 0) {
-      const existingEmployees = await this.prisma.employee.findMany({
-        where: {
-          AND: [{ id: { not: id } }, { OR: uniquenessFilters }],
-        },
-      });
-
-      if (
-        dto.pinfl &&
-        existingEmployees.some((employee) => employee.pinfl === dto.pinfl)
-      ) {
-        return ServiceResult.error(
-          ErrorCode.DuplicateData,
-          'Сотрудник с указанным ПИНФЛ уже существует',
-        );
-      }
-
-      if (
-        dto.email &&
-        existingEmployees.some((employee) => employee.email === dto.email)
-      ) {
-        return ServiceResult.error(
-          ErrorCode.DuplicateData,
-          'Сотрудник с указанным email уже существует',
-        );
-      }
-    }
-
-    const employee = await this.prisma.employee.update({
-      where: { id },
-      data: {
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        middleName: dto.middleName,
-
-        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
-
-        pinfl: dto.pinfl,
-
-        passportSeries: dto.passportSeries,
-        passportNumber: dto.passportNumber,
-        passportIssueDate: dto.passportIssueDate
-          ? new Date(dto.passportIssueDate)
-          : undefined,
-        passportIssuedBy: dto.passportIssuedBy,
-
-        phone: dto.phone,
-        email: dto.email,
-        address: dto.address,
-
-        employeeNumber: dto.employeeNumber,
-        hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
-
-        genderId: dto.genderId,
-        citizenshipId: dto.citizenshipId,
-        nationalityId: dto.nationalityId,
-        departmentId: dto.departmentId,
-        positionId: dto.positionId,
-        employmentTypeId: dto.employmentTypeId,
-        educationLevelId: dto.educationLevelId,
-        maritalStatusId: dto.maritalStatusId,
-        driverLicenseCategoryId: dto.driverLicenseCategoryId,
-
-        totalExperienceMonths: dto.totalExperienceMonths,
-        specialtyExperienceMonths: dto.specialtyExperienceMonths,
-
-        militaryService: dto.militaryService,
-        hasDriverLicense: dto.hasDriverLicense,
-
-        additionalInfo: dto.additionalInfo,
-      },
-    });
-
-    return ServiceResult.success(employee);
+    return null;
   }
 
   private buildEmployeeWhere(

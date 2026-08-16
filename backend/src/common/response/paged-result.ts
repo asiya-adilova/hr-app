@@ -1,7 +1,16 @@
+import { ApiProperty } from '@nestjs/swagger';
+
 export class PageInfo {
+  @ApiProperty({ example: 1 })
   pageIndex: number;
+
+  @ApiProperty({ example: 20 })
   pageSize: number;
+
+  @ApiProperty({ example: 42 })
   totalCount: number;
+
+  @ApiProperty({ example: 3 })
   totalPages: number;
 
   constructor(pageIndex: number, pageSize: number, totalCount: number) {

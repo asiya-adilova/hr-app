@@ -8,11 +8,10 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  Max,
   Min,
 } from 'class-validator';
 
-import { EmployeeFilterSort } from './enums/employee-filter-sort.enum';
+import { EmployeeFilterSort } from '../enums/employee-filter-sort.enum';
 
 export class EmployeeFilterDto {
   // General search

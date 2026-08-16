@@ -33,7 +33,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['prisma/**/*.ts', '**/*.dto.ts', '**/*.service.ts'],
+    files: ['prisma/**/*.ts', '**/*.dto.ts', '**/*.service.ts', '**/*mapper.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
