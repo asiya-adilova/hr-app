@@ -24,6 +24,7 @@ import {
   BaseService,
   type SoftDeletable,
 } from '../common/services/base.service';
+import type { AuthUser } from '../auth/strategies/jwt.strategy';
 
 @Injectable()
 export class EmployeesService extends BaseService<
@@ -79,9 +80,7 @@ export class EmployeesService extends BaseService<
 
   protected toCreateData(dto: CreateEmployeeDto) {
     return {
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      middleName: dto.middleName,
+      accountId: dto.accountId,
       birthDate: new Date(dto.birthDate),
       pinfl: dto.pinfl,
       passportSeries: dto.passportSeries,
@@ -112,9 +111,7 @@ export class EmployeesService extends BaseService<
 
   protected toUpdateData(dto: UpdateEmployeeDto) {
     return {
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      middleName: dto.middleName,
+      accountId: dto.accountId,
       birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
       pinfl: dto.pinfl,
       passportSeries: dto.passportSeries,
@@ -147,9 +144,19 @@ export class EmployeesService extends BaseService<
 
   override async getById(
     id: number,
+    where: Record<string, unknown> = {},
+    user?: AuthUser,
   ): Promise<ServiceResult<EmployeeDetailsResponseDto>> {
+    if (user) {
+      const denied =
+        this.forbiddenUnlessEmployeeOwner<EmployeeDetailsResponseDto>(id, user);
+      if (denied) {
+        return denied;
+      }
+    }
+
     const employee = await this.prisma.employee.findFirst({
-      where: { id },
+      where: { id, ...where },
       include: employeeLookupInclude,
     });
 
@@ -209,6 +216,11 @@ export class EmployeesService extends BaseService<
   override async create(
     dto: CreateEmployeeDto,
   ): Promise<ServiceResult<EmployeeDetailsResponseDto>> {
+    const accountError = await this.findAccountError(dto.accountId);
+    if (accountError) {
+      return accountError;
+    }
+
     const uniquenessError = await this.findUniquenessError({
       pinfl: dto.pinfl,
       email: dto.email,
@@ -225,13 +237,40 @@ export class EmployeesService extends BaseService<
   override async update(
     id: number,
     dto: UpdateEmployeeDto,
+    where: Record<string, unknown> = {},
+    user?: AuthUser,
   ): Promise<ServiceResult<EmployeeDetailsResponseDto>> {
+    if (user) {
+      const denied =
+        this.forbiddenUnlessEmployeeOwner<EmployeeDetailsResponseDto>(id, user);
+      if (denied) {
+        return denied;
+      }
+
+      if (dto.accountId !== undefined && !this.isAdmin(user)) {
+        return ServiceResult.error(
+          ErrorCode.Forbidden,
+          'Недостаточно прав для изменения аккаунта сотрудника',
+        );
+      }
+    }
+
     const currentEmployee = await this.prisma.employee.findFirst({
       where: { id },
     });
 
     if (!currentEmployee) {
       return ServiceResult.error(ErrorCode.NotFound, this.notFoundMessage);
+    }
+
+    if (dto.accountId !== undefined) {
+      const accountError = await this.findAccountError(
+        dto.accountId,
+        currentEmployee.id,
+      );
+      if (accountError) {
+        return accountError;
+      }
     }
 
     const uniquenessError = await this.findUniquenessError(
@@ -247,7 +286,7 @@ export class EmployeesService extends BaseService<
       return uniquenessError;
     }
 
-    return super.update(id, dto);
+    return super.update(id, dto, where);
   }
 
   private async findUniquenessError(
@@ -312,6 +351,36 @@ export class EmployeesService extends BaseService<
     return null;
   }
 
+  private async findAccountError(
+    accountId: number,
+    excludeEmployeeId?: number,
+  ): Promise<ServiceResult<EmployeeDetailsResponseDto> | null> {
+    const account = await this.prisma.account.findUnique({
+      where: { id: accountId },
+      include: { employee: true },
+    });
+
+    if (!account) {
+      return ServiceResult.error(ErrorCode.NotFound, 'Аккаунт не найден');
+    }
+
+    if (account.role !== 'EMPLOYEE') {
+      return ServiceResult.error(
+        ErrorCode.BadRequest,
+        'К сотруднику можно привязать только аккаунт с ролью EMPLOYEE',
+      );
+    }
+
+    if (account.employee && account.employee.id !== excludeEmployeeId) {
+      return ServiceResult.error(
+        ErrorCode.DuplicateData,
+        'Этот аккаунт уже привязан к сотруднику',
+      );
+    }
+
+    return null;
+  }
+
   private buildEmployeeWhere(
     filter: EmployeeFilterDto,
   ): Prisma.EmployeeWhereInput {
@@ -325,21 +394,35 @@ export class EmployeesService extends BaseService<
 
       where.OR = [
         {
-          firstName: {
-            contains: searchTerm,
-            mode: 'insensitive',
+          account: {
+            firstName: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
           },
         },
         {
-          lastName: {
-            contains: searchTerm,
-            mode: 'insensitive',
+          account: {
+            lastName: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
           },
         },
         {
-          middleName: {
-            contains: searchTerm,
-            mode: 'insensitive',
+          account: {
+            middleName: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          account: {
+            email: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
           },
         },
         {
@@ -533,12 +616,16 @@ export class EmployeesService extends BaseService<
 
       case EmployeeFilterSort.NameAsc:
         return {
-          lastName: 'asc',
+          account: {
+            lastName: 'asc',
+          },
         };
 
       case EmployeeFilterSort.NameDesc:
         return {
-          lastName: 'desc',
+          account: {
+            lastName: 'desc',
+          },
         };
 
       case EmployeeFilterSort.Newest:

@@ -7,6 +7,11 @@ export class EmployeeTableResponseDto {
   id!: number;
 
   @ApiProperty({
+    example: 1,
+  })
+  accountId!: number;
+
+  @ApiProperty({
     example: 'EMP-000123',
   })
   employeeNumber!: string;

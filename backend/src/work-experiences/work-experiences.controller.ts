@@ -15,8 +15,12 @@ import { UpdateWorkExperienceDto } from './dto/request/update-work-experience-re
 import { WorkExperienceResponseDto } from './dto/response/work-experience-response.dto';
 import { toApiResponse } from '../common/response/service-result-mapper';
 import { ApiDataResponse } from '../common/swagger/api-data-response';
+import { Auth } from '../auth/decorators/auth.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthUser } from '../auth/strategies/jwt.strategy';
 
 @ApiTags('Work experiences')
+@Auth()
 @Controller('employees/:employeeId/work-experiences')
 export class WorkExperiencesController {
   constructor(
@@ -27,8 +31,14 @@ export class WorkExperiencesController {
   @ApiOperation({ summary: 'Список опыта работы сотрудника' })
   @ApiParam({ name: 'employeeId', type: Number })
   @ApiDataResponse(WorkExperienceResponseDto, { isArray: true })
-  async getAll(@Param('employeeId', ParseIntPipe) employeeId: number) {
-    const result = await this.workExperiencesService.getAll({ employeeId });
+  async getAll(
+    @Param('employeeId', ParseIntPipe) employeeId: number,
+    @CurrentUser() user: AuthUser,
+  ) {
+    const result = await this.workExperiencesService.listByEmployee(
+      employeeId,
+      user,
+    );
 
     return toApiResponse(result);
   }
@@ -41,10 +51,13 @@ export class WorkExperiencesController {
   async getById(
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthUser,
   ) {
-    const result = await this.workExperiencesService.getById(id, {
+    const result = await this.workExperiencesService.getOne(
       employeeId,
-    });
+      id,
+      user,
+    );
 
     return toApiResponse(result);
   }
@@ -57,8 +70,9 @@ export class WorkExperiencesController {
   async create(
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Body() dto: CreateWorkExperienceDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    const result = await this.workExperiencesService.add(employeeId, dto);
+    const result = await this.workExperiencesService.add(employeeId, dto, user);
 
     return toApiResponse(result);
   }
@@ -73,10 +87,14 @@ export class WorkExperiencesController {
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateWorkExperienceDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    const result = await this.workExperiencesService.update(id, dto, {
-      employeeId,
-    });
+    const result = await this.workExperiencesService.update(
+      id,
+      dto,
+      { employeeId },
+      user,
+    );
 
     return toApiResponse(result);
   }
@@ -88,8 +106,13 @@ export class WorkExperiencesController {
   async delete(
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthUser,
   ) {
-    const result = await this.workExperiencesService.delete(id, { employeeId });
+    const result = await this.workExperiencesService.remove(
+      employeeId,
+      id,
+      user,
+    );
 
     return toApiResponse(result);
   }

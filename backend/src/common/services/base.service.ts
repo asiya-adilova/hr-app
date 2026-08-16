@@ -1,8 +1,10 @@
 import { Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ErrorCode } from '../enums/error-code.enum';
+import { Role } from '../enums/role.enum';
 import { PagedResult } from '../response/paged-result';
 import { ServiceResult } from '../response/service-result';
+import type { AuthUser } from '../../auth/strategies/jwt.strategy';
 
 export type Identifiable = {
   id: number;
@@ -52,6 +54,52 @@ export abstract class BaseService<
 
   protected getDefaultOrderBy(): unknown {
     return { id: 'desc' };
+  }
+
+  protected isAdmin(user: AuthUser): boolean {
+    return user.role === Role.ADMIN;
+  }
+
+  protected isOwner(
+    objectOwnerId: number | null | undefined,
+    currentUserId: number | null | undefined,
+  ): boolean {
+    if (objectOwnerId == null || currentUserId == null) {
+      return false;
+    }
+
+    return objectOwnerId === currentUserId;
+  }
+
+  protected canAccessEmployee(employeeId: number, user: AuthUser): boolean {
+    return this.isAdmin(user) || this.isOwner(employeeId, user.employeeId);
+  }
+
+  protected forbiddenUnlessEmployeeOwner<T>(
+    employeeId: number,
+    user: AuthUser,
+  ): ServiceResult<T> | null {
+    if (this.canAccessEmployee(employeeId, user)) {
+      return null;
+    }
+
+    return ServiceResult.error(
+      ErrorCode.Forbidden,
+      'Недостаточно прав для доступа к данным этого сотрудника',
+    );
+  }
+
+  protected async withEmployeeAccess<T>(
+    employeeId: number,
+    user: AuthUser,
+    action: () => Promise<ServiceResult<T>>,
+  ): Promise<ServiceResult<T>> {
+    const denied = this.forbiddenUnlessEmployeeOwner<T>(employeeId, user);
+    if (denied) {
+      return denied;
+    }
+
+    return action();
   }
 
   async getById(

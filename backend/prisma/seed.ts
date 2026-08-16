@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client';
+import { seedAdmin } from './seed-admin';
 
 const prisma: PrismaClient = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -145,6 +146,8 @@ async function main() {
   });
 
   console.log('Reference data seeded successfully!');
+
+  await seedAdmin(prisma);
 }
 
 main()

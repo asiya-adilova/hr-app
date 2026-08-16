@@ -9,4 +9,5 @@ export enum ErrorCode {
   InvalidToken = 8,
   DuplicateData = 9,
   TooManyRequests = 10,
+  Forbidden = 11,
 }

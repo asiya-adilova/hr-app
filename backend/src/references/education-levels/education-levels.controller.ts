@@ -4,8 +4,10 @@ import { EducationLevelsService } from './education-levels.service';
 import { ReferenceResponseDto } from '../../common/dto/reference-response.dto';
 import { toApiResponse } from '../../common/response/service-result-mapper';
 import { ApiDataResponse } from '../../common/swagger/api-data-response';
+import { Auth } from '../../auth/decorators/auth.decorator';
 
 @ApiTags('Education levels')
+@Auth()
 @Controller('education-levels')
 export class EducationLevelsController {
   constructor(

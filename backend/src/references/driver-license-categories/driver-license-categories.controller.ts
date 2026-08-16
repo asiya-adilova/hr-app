@@ -4,8 +4,10 @@ import { DriverLicenseCategoriesService } from './driver-license-categories.serv
 import { ReferenceResponseDto } from '../../common/dto/reference-response.dto';
 import { toApiResponse } from '../../common/response/service-result-mapper';
 import { ApiDataResponse } from '../../common/swagger/api-data-response';
+import { Auth } from '../../auth/decorators/auth.decorator';
 
 @ApiTags('Driver license categories')
+@Auth()
 @Controller('driver-license-categories')
 export class DriverLicenseCategoriesController {
   constructor(

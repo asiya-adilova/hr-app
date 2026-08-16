@@ -16,12 +16,17 @@ type NamedReference = {
   name: string;
 };
 
-type EmployeeRecord = {
-  id: number;
-  employeeNumber: string;
+type AccountRecord = {
   firstName: string;
   lastName: string;
   middleName: string | null;
+  email: string;
+};
+
+type EmployeeRecord = {
+  id: number;
+  accountId: number;
+  employeeNumber: string;
   birthDate: Date;
   pinfl: string;
   passportSeries: string;
@@ -39,6 +44,7 @@ type EmployeeRecord = {
   additionalInfo: string | null;
   createdAt: Date;
   updatedAt: Date;
+  account: AccountRecord;
 };
 
 type EducationRecord = {
@@ -67,6 +73,7 @@ type RelativeRecord = {
 };
 
 export const employeeLookupInclude = {
+  account: true,
   gender: true,
   citizenship: true,
   nationality: true,
@@ -79,6 +86,7 @@ export const employeeLookupInclude = {
 } as const;
 
 export const employeeTableInclude = {
+  account: true,
   department: true,
   position: true,
   educationLevel: true,
@@ -154,11 +162,12 @@ export class EmployeeMapper {
   ): EmployeeTableResponseDto {
     return {
       id: employee.id,
+      accountId: employee.accountId,
       employeeNumber: employee.employeeNumber,
-      firstName: employee.firstName,
-      lastName: employee.lastName,
-      middleName: employee.middleName ?? undefined,
-      fullName: EmployeeMapper.toFullName(employee),
+      firstName: employee.account.firstName,
+      lastName: employee.account.lastName,
+      middleName: employee.account.middleName ?? undefined,
+      fullName: EmployeeMapper.toFullName(employee.account),
       departmentName: employee.department.name,
       positionName: employee.position.name,
       educationLevelName: employee.educationLevel.name,
@@ -183,11 +192,12 @@ export class EmployeeMapper {
   ): EmployeeDetailsResponseDto {
     return {
       id: employee.id,
+      accountId: employee.accountId,
       employeeNumber: employee.employeeNumber,
 
-      firstName: employee.firstName,
-      lastName: employee.lastName,
-      middleName: employee.middleName ?? undefined,
+      firstName: employee.account.firstName,
+      lastName: employee.account.lastName,
+      middleName: employee.account.middleName ?? undefined,
 
       birthDate: employee.birthDate,
       pinfl: employee.pinfl,
@@ -276,9 +286,7 @@ export class EmployeeMapper {
 
   static toEmployeeUncheckedCreateData(dto: EmployeeDetailsResponseDto) {
     return {
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      middleName: dto.middleName,
+      accountId: dto.accountId,
       birthDate: dto.birthDate,
       pinfl: dto.pinfl,
       passportSeries: dto.passport.series,
@@ -338,7 +346,7 @@ export class EmployeeMapper {
   ): EmployeeContactResponseDto {
     return {
       phone: employee.phone,
-      email: employee.email ?? undefined,
+      email: employee.email ?? employee.account.email,
       address: employee.address,
     };
   }

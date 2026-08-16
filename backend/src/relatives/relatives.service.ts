@@ -9,6 +9,7 @@ import { RelativeResponseDto } from './dto/response/relative-response.dto';
 import { CreateRelativeDto } from './dto/request/create-relative-request.dto';
 import { UpdateRelativeDto } from './dto/request/update-relative-request.dto';
 import type { Relative } from '../../generated/prisma/client';
+import type { AuthUser } from '../auth/strategies/jwt.strategy';
 
 @Injectable()
 export class RelativesService extends BaseService<
@@ -54,6 +55,25 @@ export class RelativesService extends BaseService<
     return result.result ?? [];
   }
 
+  async listByEmployee(
+    employeeId: number,
+    user: AuthUser,
+  ): Promise<ServiceResult<RelativeResponseDto[]>> {
+    return this.withEmployeeAccess(employeeId, user, () =>
+      super.getAll({ employeeId }),
+    );
+  }
+
+  async getOne(
+    employeeId: number,
+    id: number,
+    user: AuthUser,
+  ): Promise<ServiceResult<RelativeResponseDto>> {
+    return this.withEmployeeAccess(employeeId, user, () =>
+      super.getById(id, { employeeId }),
+    );
+  }
+
   override async create(
     dto: CreateRelativeDto,
     extra: Record<string, unknown> = {},
@@ -83,8 +103,18 @@ export class RelativesService extends BaseService<
     id: number,
     dto: UpdateRelativeDto,
     where: Record<string, unknown> = {},
+    user?: AuthUser,
   ): Promise<ServiceResult<RelativeResponseDto>> {
     const employeeId = where.employeeId as number;
+    if (user) {
+      const denied = this.forbiddenUnlessEmployeeOwner<RelativeResponseDto>(
+        employeeId,
+        user,
+      );
+      if (denied) {
+        return denied;
+      }
+    }
     const existing = await this.prisma.relative.findFirst({
       where: { id, employeeId },
     });
@@ -112,8 +142,21 @@ export class RelativesService extends BaseService<
   async add(
     employeeId: number,
     dto: CreateRelativeDto,
+    user: AuthUser,
   ): Promise<ServiceResult<RelativeResponseDto>> {
-    return this.create(dto, { employeeId });
+    return this.withEmployeeAccess(employeeId, user, () =>
+      this.create(dto, { employeeId }),
+    );
+  }
+
+  async remove(
+    employeeId: number,
+    id: number,
+    user: AuthUser,
+  ): Promise<ServiceResult<void>> {
+    return this.withEmployeeAccess(employeeId, user, () =>
+      super.delete(id, { employeeId }),
+    );
   }
 
   private async findUniquenessError(

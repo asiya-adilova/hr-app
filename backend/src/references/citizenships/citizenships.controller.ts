@@ -4,8 +4,10 @@ import { CitizenshipsService } from './citizenships.service';
 import { ReferenceResponseDto } from '../../common/dto/reference-response.dto';
 import { toApiResponse } from '../../common/response/service-result-mapper';
 import { ApiDataResponse } from '../../common/swagger/api-data-response';
+import { Auth } from '../../auth/decorators/auth.decorator';
 
 @ApiTags('Citizenships')
+@Auth()
 @Controller('citizenships')
 export class CitizenshipsController {
   constructor(private readonly citizenshipsService: CitizenshipsService) {}

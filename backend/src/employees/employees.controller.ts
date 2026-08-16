@@ -29,8 +29,14 @@ import { ApiDataResponse } from '../common/swagger/api-data-response';
 import { EducationResponseDto } from '../educations/dto/response/education-response.dto';
 import { RelativeResponseDto } from '../relatives/dto/response/relative-response.dto';
 import { WorkExperienceResponseDto } from '../work-experiences/dto/response/work-experience-response.dto';
+import { Auth } from '../auth/decorators/auth.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../common/enums/role.enum';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthUser } from '../auth/strategies/jwt.strategy';
 
 @ApiTags('Employees')
+@Auth()
 @ApiExtraModels(
   EmployeeDetailsResponseDto,
   EmployeeTableResponseDto,
@@ -43,6 +49,7 @@ export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
 
   @Get()
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Список сотрудников' })
   @ApiDataResponse(EmployeeTableResponseDto, { paged: true })
   async getAll(@Query() pagination: PaginationDto) {
@@ -55,6 +62,7 @@ export class EmployeesController {
   }
 
   @Post('filter')
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Фильтрация сотрудников' })
   @ApiBody({ type: EmployeeFilterDto })
   @ApiDataResponse(EmployeeTableResponseDto, { paged: true })
@@ -75,13 +83,17 @@ export class EmployeesController {
   @ApiOperation({ summary: 'Получить сотрудника по идентификатору' })
   @ApiParam({ name: 'id', type: Number })
   @ApiDataResponse(EmployeeDetailsResponseDto)
-  async getById(@Param('id', ParseIntPipe) id: number) {
-    const result = await this.employeesService.getById(id);
+  async getById(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthUser,
+  ) {
+    const result = await this.employeesService.getById(id, {}, user);
 
     return toApiResponse(result);
   }
 
   @Post()
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Создать сотрудника' })
   @ApiBody({ type: CreateEmployeeDto })
   @ApiDataResponse(EmployeeDetailsResponseDto)
@@ -99,13 +111,15 @@ export class EmployeesController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateEmployeeDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    const result = await this.employeesService.update(id, dto);
+    const result = await this.employeesService.update(id, dto, {}, user);
 
     return toApiResponse(result);
   }
 
   @Delete(':id')
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Удалить сотрудника' })
   @ApiParam({ name: 'id', type: Number })
   async delete(@Param('id', ParseIntPipe) id: number) {

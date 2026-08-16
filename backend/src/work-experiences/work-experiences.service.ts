@@ -9,6 +9,7 @@ import { WorkExperienceResponseDto } from './dto/response/work-experience-respon
 import { CreateWorkExperienceDto } from './dto/request/create-work-experience-request.dto';
 import { UpdateWorkExperienceDto } from './dto/request/update-work-experience-request.dto';
 import type { WorkExperience } from '../../generated/prisma/client';
+import type { AuthUser } from '../auth/strategies/jwt.strategy';
 
 @Injectable()
 export class WorkExperiencesService extends BaseService<
@@ -68,6 +69,25 @@ export class WorkExperiencesService extends BaseService<
     return result.result ?? [];
   }
 
+  async listByEmployee(
+    employeeId: number,
+    user: AuthUser,
+  ): Promise<ServiceResult<WorkExperienceResponseDto[]>> {
+    return this.withEmployeeAccess(employeeId, user, () =>
+      super.getAll({ employeeId }),
+    );
+  }
+
+  async getOne(
+    employeeId: number,
+    id: number,
+    user: AuthUser,
+  ): Promise<ServiceResult<WorkExperienceResponseDto>> {
+    return this.withEmployeeAccess(employeeId, user, () =>
+      super.getById(id, { employeeId }),
+    );
+  }
+
   override async create(
     dto: CreateWorkExperienceDto,
     extra: Record<string, unknown> = {},
@@ -98,8 +118,19 @@ export class WorkExperiencesService extends BaseService<
     id: number,
     dto: UpdateWorkExperienceDto,
     where: Record<string, unknown> = {},
+    user?: AuthUser,
   ): Promise<ServiceResult<WorkExperienceResponseDto>> {
     const employeeId = where.employeeId as number;
+    if (user) {
+      const denied =
+        this.forbiddenUnlessEmployeeOwner<WorkExperienceResponseDto>(
+          employeeId,
+          user,
+        );
+      if (denied) {
+        return denied;
+      }
+    }
     const existing = await this.prisma.workExperience.findFirst({
       where: { id, employeeId },
     });
@@ -128,8 +159,21 @@ export class WorkExperiencesService extends BaseService<
   async add(
     employeeId: number,
     dto: CreateWorkExperienceDto,
+    user: AuthUser,
   ): Promise<ServiceResult<WorkExperienceResponseDto>> {
-    return this.create(dto, { employeeId });
+    return this.withEmployeeAccess(employeeId, user, () =>
+      this.create(dto, { employeeId }),
+    );
+  }
+
+  async remove(
+    employeeId: number,
+    id: number,
+    user: AuthUser,
+  ): Promise<ServiceResult<void>> {
+    return this.withEmployeeAccess(employeeId, user, () =>
+      super.delete(id, { employeeId }),
+    );
   }
 
   private async findUniquenessError(

@@ -15,34 +15,11 @@ import {
 
 export class CreateEmployeeDto {
   @ApiProperty({
-    example: 'Алишер',
-    description: 'Имя сотрудника',
-    maxLength: 100,
+    example: 1,
+    description: 'Идентификатор аккаунта сотрудника',
   })
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(100)
-  firstName!: string;
-
-  @ApiProperty({
-    example: 'Каримов',
-    description: 'Фамилия сотрудника',
-    maxLength: 100,
-  })
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(100)
-  lastName!: string;
-
-  @ApiPropertyOptional({
-    example: 'Бахтиёрович',
-    description: 'Отчество сотрудника',
-    maxLength: 100,
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  middleName?: string;
+  @IsInt()
+  accountId!: number;
 
   @ApiProperty({
     example: '1998-05-10',

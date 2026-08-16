@@ -71,13 +71,45 @@ model DriverLicenseCategory {
   employees Employee[]
 }
 
-model Employee {
-  id Int @id @default(autoincrement())
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
 
-  // Personal information
+model Account {
+  id         Int     @id @default(autoincrement())
+  email      String  @unique
+  password   String
+  role       Role
   firstName  String
   lastName   String
   middleName String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  employee      Employee?
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  accountId Int
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+}
+
+model Employee {
+  id Int @id @default(autoincrement())
+
+  accountId Int     @unique
+  account   Account @relation(fields: [accountId], references: [id])
 
   birthDate DateTime
 

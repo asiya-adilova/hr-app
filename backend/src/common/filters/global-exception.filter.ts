@@ -83,7 +83,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           ? ErrorCode.BadRequest
           : status === HttpStatus.UNAUTHORIZED
             ? ErrorCode.Unauthorized
-            : ErrorCode.InternalServerError;
+            : status === HttpStatus.FORBIDDEN
+              ? ErrorCode.Forbidden
+              : ErrorCode.InternalServerError;
 
     response.status(status).json(ApiResponse.error(errorCode, message));
   }
