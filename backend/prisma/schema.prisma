@@ -1,0 +1,190 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Gender {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  employees Employee[]
+}
+
+model Citizenship {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  employees Employee[]
+}
+
+model Nationality {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  employees Employee[]
+}
+
+model Department {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  employees Employee[]
+}
+
+model Position {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  employees Employee[]
+}
+
+model EmploymentType {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  employees Employee[]
+}
+
+model EducationLevel {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  employees Employee[]
+}
+
+model MaritalStatus {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  employees Employee[]
+}
+
+model DriverLicenseCategory {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  employees Employee[]
+}
+
+model Employee {
+  id Int @id @default(autoincrement())
+
+  // Personal information
+  firstName  String
+  lastName   String
+  middleName String?
+
+  birthDate DateTime
+
+  pinfl          String @unique
+  passportSeries String
+  passportNumber String
+  passportIssueDate DateTime
+  passportIssuedBy  String
+
+  phone   String
+  email   String?
+  address String
+
+  // Employment
+  employeeNumber String @unique
+  hireDate       DateTime
+
+  totalExperienceMonths         Int
+  specialtyExperienceMonths    Int?
+
+  // Additional
+  militaryService  Boolean
+  hasDriverLicense Boolean
+  additionalInfo   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  deletedAt DateTime?
+  isDeleted Boolean  @default(false)
+
+  // Foreign keys
+  genderId                   Int
+  citizenshipId              Int
+  nationalityId              Int
+  departmentId              Int
+  positionId                 Int
+  employmentTypeId          Int
+  educationLevelId          Int
+  maritalStatusId           Int
+  driverLicenseCategoryId   Int?
+
+  // Relationships
+  gender Gender @relation(fields: [genderId], references: [id])
+  citizenship Citizenship @relation(fields: [citizenshipId], references: [id])
+  nationality Nationality @relation(fields: [nationalityId], references: [id])
+  department Department @relation(fields: [departmentId], references: [id])
+  position Position @relation(fields: [positionId], references: [id])
+  employmentType EmploymentType @relation(fields: [employmentTypeId], references: [id])
+  educationLevel EducationLevel @relation(fields: [educationLevelId], references: [id])
+  maritalStatus MaritalStatus @relation(fields: [maritalStatusId], references: [id])
+  driverLicenseCategory DriverLicenseCategory? @relation(fields: [driverLicenseCategoryId], references: [id])
+
+  relatives       Relative[]
+  workExperiences WorkExperience[]
+  educations      Education[]
+}
+
+model Education {
+  id Int @id @default(autoincrement())
+
+  employeeId     Int
+  institution    String
+  specialty      String
+  graduationYear Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  deletedAt DateTime?
+  isDeleted Boolean  @default(false)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
+
+model Relative {
+  id Int @id @default(autoincrement())
+
+  employeeId Int
+
+  fullName     String
+  relationship String
+  birthDate    DateTime?
+  phone        String?
+  workplace    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  deletedAt DateTime?
+  isDeleted Boolean  @default(false)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
+
+model WorkExperience {
+  id Int @id @default(autoincrement())
+
+  employeeId Int
+
+  companyName      String
+  position         String
+  startDate        DateTime
+  endDate          DateTime?
+  responsibilities String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  deletedAt DateTime?
+  isDeleted Boolean  @default(false)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
