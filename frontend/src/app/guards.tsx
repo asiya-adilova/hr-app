@@ -30,6 +30,16 @@ export function RequireAuth() {
   return <Outlet />;
 }
 
+export function RequireAdmin() {
+  const { account } = useAuth();
+
+  if (account?.role !== 'ADMIN') {
+    return <Navigate to={homePath(account?.role, account?.employeeId)} replace />;
+  }
+
+  return <Outlet />;
+}
+
 export function HomeRedirect() {
   const { account } = useAuth();
   return <Navigate to={homePath(account?.role, account?.employeeId)} replace />;

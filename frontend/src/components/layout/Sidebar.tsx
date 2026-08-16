@@ -5,6 +5,7 @@ import { useAuth } from '../../features/auth/hooks/useAuth.ts';
 export function Sidebar() {
   const { account } = useAuth();
   const employeeId = account?.employeeId;
+  const isAdmin = account?.role === 'ADMIN';
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `block rounded-xl px-3 py-2 text-sm font-medium ${
@@ -17,13 +18,23 @@ export function Sidebar() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">
           HR
         </p>
-        <h1 className="text-lg font-bold">Кабинет сотрудника</h1>
+        <h1 className="text-lg font-bold">
+          {isAdmin ? 'Админ-панель' : 'Кабинет сотрудника'}
+        </h1>
       </div>
       <nav className="space-y-1">
-        {account?.role === 'ADMIN' ? (
-          <NavLink to={routes.employees} className={linkClass}>
-            Сотрудники
-          </NavLink>
+        {isAdmin ? (
+          <>
+            <NavLink to={routes.admin} end className={linkClass}>
+              Главная
+            </NavLink>
+            <NavLink to={routes.adminEmployees} className={linkClass}>
+              Сотрудники
+            </NavLink>
+            <NavLink to={routes.adminReferences} className={linkClass}>
+              Справочники
+            </NavLink>
+          </>
         ) : (
           <>
             {employeeId ? (

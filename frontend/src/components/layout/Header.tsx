@@ -19,7 +19,9 @@ export function Header() {
   return (
     <header className="flex items-center justify-between border-b border-line bg-white px-6 py-4">
       <div>
-        <p className="text-sm text-ink-500">Добро пожаловать</p>
+        <p className="text-sm text-ink-500">
+          {account.role === 'ADMIN' ? 'Администратор' : 'Добро пожаловать'}
+        </p>
         <p className="font-semibold">
           {account.firstName} {account.lastName}
         </p>

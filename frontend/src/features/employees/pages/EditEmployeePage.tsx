@@ -31,7 +31,7 @@ export function EditEmployeePage() {
         <h1 className="text-2xl font-bold">Редактирование</h1>
       </div>
       <EmployeeForm
-        accountId={account.id}
+        accountId={employee.accountId}
         employeeNumberHint={employee.employeeNumber}
         initial={employee}
         submitting={submitting}
@@ -40,7 +40,9 @@ export function EditEmployeePage() {
           setSubmitting(true);
           setSubmitError(null);
           try {
-            await employeeApi.update(employee.id, payload);
+            const updatePayload: Partial<typeof payload> = { ...payload };
+            delete updatePayload.accountId;
+            await employeeApi.update(employee.id, updatePayload);
             navigate(routes.employeeDetails(employee.id));
           } catch (caught) {
             setSubmitError(

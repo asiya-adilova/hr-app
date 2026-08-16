@@ -102,4 +102,6 @@ export type EmployeeTableItem = {
   fullName: string;
   departmentName: string;
   positionName: string;
+  educationLevelName: string;
+  hireDate: string;
 };

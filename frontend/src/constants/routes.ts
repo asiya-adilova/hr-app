@@ -2,6 +2,10 @@ export const routes = {
   login: '/login',
   register: '/register',
   home: '/',
+  admin: '/admin',
+  adminEmployees: '/admin/employees',
+  adminReferences: '/admin/references',
+  adminReference: (type: string) => `/admin/references/${type}`,
   employees: '/employees',
   createEmployee: '/employees/new',
   employeeDetails: (id: number | string) => `/employees/${id}`,
@@ -10,7 +14,7 @@ export const routes = {
 
 export function homePath(role?: string, employeeId?: number | null): string {
   if (role === 'ADMIN') {
-    return routes.employees;
+    return routes.admin;
   }
 
   if (employeeId) {
