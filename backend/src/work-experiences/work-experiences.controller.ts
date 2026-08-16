@@ -15,9 +15,9 @@ import { UpdateWorkExperienceDto } from './dto/request/update-work-experience-re
 import { WorkExperienceResponseDto } from './dto/response/work-experience-response.dto';
 import { toApiResponse } from '../common/response/service-result-mapper';
 import { ApiDataResponse } from '../common/swagger/api-data-response';
-import { Auth } from '../auth/decorators/auth.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import type { AuthUser } from '../auth/strategies/jwt.strategy';
+import { Auth } from '../security/decorators/auth.decorator';
+import { CurrentUser } from '../security/decorators/current-user.decorator';
+import type { AuthUser } from '../security/strategies/jwt.strategy';
 
 @ApiTags('Work experiences')
 @Auth()

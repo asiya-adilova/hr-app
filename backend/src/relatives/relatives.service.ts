@@ -9,7 +9,7 @@ import { RelativeResponseDto } from './dto/response/relative-response.dto';
 import { CreateRelativeDto } from './dto/request/create-relative-request.dto';
 import { UpdateRelativeDto } from './dto/request/update-relative-request.dto';
 import type { Relative } from '../../generated/prisma/client';
-import type { AuthUser } from '../auth/strategies/jwt.strategy';
+import type { AuthUser } from '../security/strategies/jwt.strategy';
 
 @Injectable()
 export class RelativesService extends BaseService<

@@ -9,7 +9,7 @@ import { WorkExperienceResponseDto } from './dto/response/work-experience-respon
 import { CreateWorkExperienceDto } from './dto/request/create-work-experience-request.dto';
 import { UpdateWorkExperienceDto } from './dto/request/update-work-experience-request.dto';
 import type { WorkExperience } from '../../generated/prisma/client';
-import type { AuthUser } from '../auth/strategies/jwt.strategy';
+import type { AuthUser } from '../security/strategies/jwt.strategy';
 
 @Injectable()
 export class WorkExperiencesService extends BaseService<

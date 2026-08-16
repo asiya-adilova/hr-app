@@ -4,7 +4,7 @@ import { MaritalStatusesService } from './marital-statuses.service';
 import { ReferenceResponseDto } from '../../common/dto/reference-response.dto';
 import { toApiResponse } from '../../common/response/service-result-mapper';
 import { ApiDataResponse } from '../../common/swagger/api-data-response';
-import { Auth } from '../../auth/decorators/auth.decorator';
+import { Auth } from '../../security/decorators/auth.decorator';
 
 @ApiTags('Marital statuses')
 @Auth()

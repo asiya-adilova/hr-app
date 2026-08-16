@@ -29,11 +29,11 @@ import { ApiDataResponse } from '../common/swagger/api-data-response';
 import { EducationResponseDto } from '../educations/dto/response/education-response.dto';
 import { RelativeResponseDto } from '../relatives/dto/response/relative-response.dto';
 import { WorkExperienceResponseDto } from '../work-experiences/dto/response/work-experience-response.dto';
-import { Auth } from '../auth/decorators/auth.decorator';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Auth } from '../security/decorators/auth.decorator';
+import { Roles } from '../security/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import type { AuthUser } from '../auth/strategies/jwt.strategy';
+import { CurrentUser } from '../security/decorators/current-user.decorator';
+import type { AuthUser } from '../security/strategies/jwt.strategy';
 
 @ApiTags('Employees')
 @Auth()

@@ -6,13 +6,13 @@ import { RelativesModule } from './relatives/relatives.module';
 import { EducationsModule } from './educations/educations.module';
 import { WorkExperiencesModule } from './work-experiences/work-experiences.module';
 import { ReferencesModule } from './references/references.module';
-import { AuthModule } from './auth/auth.module';
+import { SecurityModule } from './security/security.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
-    AuthModule,
+    SecurityModule,
     EmployeesModule,
     RelativesModule,
     EducationsModule,

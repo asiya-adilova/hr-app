@@ -9,7 +9,7 @@ import { EducationResponseDto } from './dto/response/education-response.dto';
 import { CreateEducationDto } from './dto/request/create-education-request.dto';
 import { UpdateEducationDto } from './dto/request/update-education-request.dto';
 import type { Education } from '../../generated/prisma/client';
-import type { AuthUser } from '../auth/strategies/jwt.strategy';
+import type { AuthUser } from '../security/strategies/jwt.strategy';
 
 @Injectable()
 export class EducationsService extends BaseService<

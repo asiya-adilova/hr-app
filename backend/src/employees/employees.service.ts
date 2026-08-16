@@ -24,7 +24,7 @@ import {
   BaseService,
   type SoftDeletable,
 } from '../common/services/base.service';
-import type { AuthUser } from '../auth/strategies/jwt.strategy';
+import type { AuthUser } from '../security/strategies/jwt.strategy';
 
 @Injectable()
 export class EmployeesService extends BaseService<

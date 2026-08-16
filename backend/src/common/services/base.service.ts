@@ -4,7 +4,7 @@ import { ErrorCode } from '../enums/error-code.enum';
 import { Role } from '../enums/role.enum';
 import { PagedResult } from '../response/paged-result';
 import { ServiceResult } from '../response/service-result';
-import type { AuthUser } from '../../auth/strategies/jwt.strategy';
+import type { AuthUser } from '../../security/strategies/jwt.strategy';
 
 export type Identifiable = {
   id: number;
