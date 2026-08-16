@@ -1,0 +1,79 @@
+import { formatDate } from '../../../utils/date.ts';
+import type { EmployeeDetails } from '../types/employee.ts';
+
+function Row({ label, value }: { label: string; value?: string | number | null }) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-wide text-ink-500">{label}</p>
+      <p className="mt-1 font-medium">{value || '—'}</p>
+    </div>
+  );
+}
+
+export function EmployeeDetails({ employee }: { employee: EmployeeDetails }) {
+  return (
+    <div className="space-y-6">
+      <section className="rounded-3xl border border-line bg-white p-6">
+        <h2 className="mb-4 text-lg font-semibold">Личные данные</h2>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Row label="ФИО" value={`${employee.lastName} ${employee.firstName} ${employee.middleName ?? ''}`} />
+          <Row label="Табельный номер" value={employee.employeeNumber} />
+          <Row label="Дата рождения" value={formatDate(employee.birthDate)} />
+          <Row label="ПИНФЛ" value={employee.pinfl} />
+          <Row label="Телефон" value={employee.contact.phone} />
+          <Row label="Email" value={employee.contact.email} />
+          <Row label="Адрес" value={employee.contact.address} />
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-line bg-white p-6">
+        <h2 className="mb-4 text-lg font-semibold">Работа</h2>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Row label="Подразделение" value={employee.department.name} />
+          <Row label="Должность" value={employee.position.name} />
+          <Row label="Тип занятости" value={employee.employmentType.name} />
+          <Row label="Дата приёма" value={formatDate(employee.hireDate)} />
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-line bg-white p-6">
+        <h2 className="mb-4 text-lg font-semibold">Образование</h2>
+        {employee.education.length ? (
+          <ul className="space-y-3">
+            {employee.education.map((item) => (
+              <li key={item.id ?? item.institutionName} className="rounded-2xl bg-slate-50 p-4">
+                <p className="font-medium">{item.institutionName}</p>
+                <p className="text-sm text-ink-500">
+                  {item.specialty}
+                  {item.graduationYear ? ` · ${item.graduationYear}` : ''}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-ink-500">Пока нет записей</p>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-line bg-white p-6">
+        <h2 className="mb-4 text-lg font-semibold">Опыт работы</h2>
+        {employee.workExperience.length ? (
+          <ul className="space-y-3">
+            {employee.workExperience.map((item) => (
+              <li key={item.id ?? item.companyName} className="rounded-2xl bg-slate-50 p-4">
+                <p className="font-medium">
+                  {item.position} · {item.companyName}
+                </p>
+                <p className="text-sm text-ink-500">
+                  {formatDate(item.startDate)} — {item.isCurrent ? 'н.в.' : formatDate(item.endDate)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-ink-500">Пока нет записей</p>
+        )}
+      </section>
+    </div>
+  );
+}

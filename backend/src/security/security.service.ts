@@ -9,8 +9,9 @@ import { Role } from '../common/enums/role.enum';
 import { ServiceResult } from '../common/response/service-result';
 import { LoginDto, RegisterDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { AuthResponseDto } from './dto/auth-response.dto';
+import { AuthResponseDto, AccountResponseDto } from './dto/auth-response.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
+import type { AuthUser } from './strategies/jwt.strategy';
 
 type JwtExpiresIn = `${number}${'s' | 'm' | 'h' | 'd'}`;
 
@@ -134,6 +135,23 @@ export class SecurityService {
     return ServiceResult.success(await this.issueTokens(account));
   }
 
+  async me(user: AuthUser): Promise<ServiceResult<AccountResponseDto>> {
+    const account = await this.prisma.account.findUnique({
+      where: { id: user.id },
+    });
+
+    if (!account) {
+      return ServiceResult.error(
+        ErrorCode.Unauthorized,
+        'Пользователь не найден',
+      );
+    }
+
+    return ServiceResult.success(
+      this.toAccountResponse(account, user.employeeId),
+    );
+  }
+
   private async issueTokens(
     account: AccountAuthFields,
   ): Promise<AuthResponseDto> {
@@ -168,19 +186,32 @@ export class SecurityService {
       },
     });
 
+    const employee = await this.prisma.employee.findFirst({
+      where: { accountId: account.id },
+      select: { id: true },
+    });
+
     return {
       accessToken,
       refreshToken,
       tokenType: 'Bearer',
       expiresIn: this.accessExpiresIn,
-      account: {
-        id: account.id,
-        email: account.email,
-        role,
-        firstName: account.firstName,
-        lastName: account.lastName,
-        middleName: account.middleName ?? undefined,
-      },
+      account: this.toAccountResponse(account, employee?.id ?? null),
+    };
+  }
+
+  private toAccountResponse(
+    account: AccountAuthFields,
+    employeeId: number | null,
+  ): AccountResponseDto {
+    return {
+      id: account.id,
+      email: account.email,
+      role: account.role as Role,
+      firstName: account.firstName,
+      lastName: account.lastName,
+      middleName: account.middleName ?? undefined,
+      employeeId,
     };
   }
 

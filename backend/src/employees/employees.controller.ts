@@ -93,12 +93,13 @@ export class EmployeesController {
   }
 
   @Post()
-  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Создать сотрудника' })
   @ApiBody({ type: CreateEmployeeDto })
   @ApiDataResponse(EmployeeDetailsResponseDto)
-  async create(@Body() dto: CreateEmployeeDto) {
-    const result = await this.employeesService.create(dto);
+  async create(@Body() dto: CreateEmployeeDto, @CurrentUser() user: AuthUser) {
+    const payload =
+      user.role === Role.ADMIN ? dto : { ...dto, accountId: user.id };
+    const result = await this.employeesService.create(payload);
 
     return toApiResponse(result);
   }

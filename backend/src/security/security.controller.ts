@@ -1,10 +1,13 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SecurityService } from './security.service';
 import { LoginDto, RegisterDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { AuthResponseDto } from './dto/auth-response.dto';
+import { AccountResponseDto, AuthResponseDto } from './dto/auth-response.dto';
 import { Public } from './decorators/public.decorator';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { Auth } from './decorators/auth.decorator';
+import type { AuthUser } from './strategies/jwt.strategy';
 import { toApiResponse } from '../common/response/service-result-mapper';
 import { ApiDataResponse } from '../common/swagger/api-data-response';
 
@@ -38,5 +41,13 @@ export class SecurityController {
   @ApiDataResponse(AuthResponseDto)
   async refresh(@Body() dto: RefreshTokenDto) {
     return toApiResponse(await this.securityService.refresh(dto));
+  }
+
+  @Auth()
+  @Get('me')
+  @ApiOperation({ summary: 'Текущий аккаунт' })
+  @ApiDataResponse(AccountResponseDto)
+  async me(@CurrentUser() user: AuthUser) {
+    return toApiResponse(await this.securityService.me(user));
   }
 }

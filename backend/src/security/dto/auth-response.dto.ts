@@ -19,6 +19,9 @@ export class AccountResponseDto {
 
   @ApiPropertyOptional({ example: 'Иванович' })
   middleName?: string;
+
+  @ApiPropertyOptional({ example: 1, nullable: true })
+  employeeId?: number | null;
 }
 
 export class AuthResponseDto {
