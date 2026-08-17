@@ -75,6 +75,18 @@ export function EditCardButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+export function SectionEditButton({ onClick }: { onClick: () => void }) {
+  return (
+    <IconButton
+      label="Изменить"
+      onClick={onClick}
+      className="text-brand-700 hover:bg-brand-50"
+    >
+      <Icon path="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </IconButton>
+  );
+}
+
 export function ExpandCardButton({
   expanded,
   onClick,

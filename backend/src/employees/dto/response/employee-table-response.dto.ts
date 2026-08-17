@@ -17,21 +17,6 @@ export class EmployeeTableResponseDto {
   employeeNumber!: string;
 
   @ApiProperty({
-    example: 'Алишер',
-  })
-  firstName!: string;
-
-  @ApiProperty({
-    example: 'Каримов',
-  })
-  lastName!: string;
-
-  @ApiPropertyOptional({
-    example: 'Рустамович',
-  })
-  middleName?: string;
-
-  @ApiProperty({
     example: 'Алишер Каримов Рустамович',
   })
   fullName!: string;
@@ -47,9 +32,14 @@ export class EmployeeTableResponseDto {
   positionName?: string;
 
   @ApiPropertyOptional({
-    example: 'Высшее',
+    example: 'Ташкент',
   })
-  educationLevelName?: string;
+  cityName?: string;
+
+  @ApiPropertyOptional({
+    example: 'Узбекистан',
+  })
+  countryName?: string;
 
   @ApiPropertyOptional({
     example: '2020-03-15',
@@ -57,26 +47,15 @@ export class EmployeeTableResponseDto {
   hireDate?: Date;
 
   @ApiProperty({
-    example: 96,
-    description: 'Общий трудовой стаж в месяцах',
+    example: '+998901234567',
   })
-  totalExperienceMonths!: number;
+  phone!: string;
 
   @ApiPropertyOptional({
     example: 72,
     description: 'Стаж по специальности в месяцах',
   })
   specialtyExperienceMonths?: number;
-
-  @ApiProperty({
-    example: true,
-  })
-  hasDriverLicense!: boolean;
-
-  @ApiProperty({
-    example: true,
-  })
-  militaryService!: boolean;
 
   @ApiProperty({
     example: '2026-08-16T18:30:00.000Z',

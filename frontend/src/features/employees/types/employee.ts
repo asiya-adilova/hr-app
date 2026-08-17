@@ -118,12 +118,12 @@ export type CreateEmployeePayload = {
 export type EmployeeTableItem = {
   id: number;
   employeeNumber: string;
-  firstName: string;
-  lastName: string;
-  middleName?: string;
   fullName: string;
   departmentName?: string;
   positionName?: string;
-  educationLevelName?: string;
+  cityName?: string;
+  countryName?: string;
   hireDate?: string;
+  phone: string;
+  specialtyExperienceMonths?: number;
 };

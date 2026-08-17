@@ -1,5 +1,5 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { EmploymentTypesService } from './employment-types.service';
 import { ReferenceResponseDto } from '../../common/dto/reference-response.dto';
 import { toApiResponse } from '../../common/response/service-result-mapper';
@@ -16,9 +16,10 @@ export class EmploymentTypesController {
 
   @Get()
   @ApiOperation({ summary: 'Список типов занятости' })
+  @ApiQuery({ name: 'search', required: false, description: 'Поиск по названию' })
   @ApiDataResponse(ReferenceResponseDto, { isArray: true })
-  async getAll() {
-    return toApiResponse(await this.employmentTypesService.getAll());
+  async getAll(@Query('search') search?: string) {
+    return toApiResponse(await this.employmentTypesService.search(search));
   }
 
   @Get(':id')

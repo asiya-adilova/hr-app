@@ -1,5 +1,5 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CitiesService } from './cities.service';
 import { CityResponseDto } from './city-response.dto';
 import { toApiResponse } from '../../common/response/service-result-mapper';
@@ -14,9 +14,10 @@ export class CitiesController {
 
   @Get()
   @ApiOperation({ summary: 'Список городов' })
+  @ApiQuery({ name: 'search', required: false, description: 'Поиск по названию' })
   @ApiDataResponse(CityResponseDto, { isArray: true })
-  async getAll() {
-    return toApiResponse(await this.citiesService.getAll());
+  async getAll(@Query('search') search?: string) {
+    return toApiResponse(await this.citiesService.search(search));
   }
 
   @Get(':id')

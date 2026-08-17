@@ -421,82 +421,24 @@ export class EmployeesService extends BaseService<
 
     // Search
     if (filter.searchTerm?.trim()) {
-      const searchTerm = filter.searchTerm.trim();
+      const tokens = filter.searchTerm.trim().split(/\s+/).filter(Boolean);
 
-      where.OR = [
-        {
-          account: {
-            firstName: {
-              contains: searchTerm,
-              mode: 'insensitive',
-            },
-          },
-        },
-        {
-          account: {
-            lastName: {
-              contains: searchTerm,
-              mode: 'insensitive',
-            },
-          },
-        },
-        {
-          account: {
-            middleName: {
-              contains: searchTerm,
-              mode: 'insensitive',
-            },
-          },
-        },
-        {
-          account: {
-            email: {
-              contains: searchTerm,
-              mode: 'insensitive',
-            },
-          },
-        },
-        {
-          phone: {
-            contains: searchTerm,
-            mode: 'insensitive',
-          },
-        },
-        {
-          employeeNumber: {
-            contains: searchTerm,
-            mode: 'insensitive',
-          },
-        },
-        {
-          pinfl: {
-            contains: searchTerm,
-            mode: 'insensitive',
-          },
-        },
-        {
-          passportNumber: {
-            contains: searchTerm,
-            mode: 'insensitive',
-          },
-        },
-        {
-          address: {
-            contains: searchTerm,
-            mode: 'insensitive',
-          },
-        },
-      ];
-    }
-
-    // Employee IDs
-    if (filter.employeeIds?.length) {
-      where.id = {
-        in: filter.employeeIds,
-      };
+      where.AND = tokens.map((token) => this.matchSearchToken(token));
     }
 
     // References
+    if (filter.countryIds?.length) {
+      where.countryId = {
+        in: filter.countryIds,
+      };
+    }
+
+    if (filter.cityIds?.length) {
+      where.cityId = {
+        in: filter.cityIds,
+      };
+    }
+
     if (filter.departmentIds?.length) {
       where.departmentId = {
         in: filter.departmentIds,
@@ -546,21 +488,6 @@ export class EmployeesService extends BaseService<
 
     // Experience
     if (
-      filter.minExperienceMonths !== undefined ||
-      filter.maxExperienceMonths !== undefined
-    ) {
-      where.totalExperienceMonths = {};
-
-      if (filter.minExperienceMonths !== undefined) {
-        where.totalExperienceMonths.gte = filter.minExperienceMonths;
-      }
-
-      if (filter.maxExperienceMonths !== undefined) {
-        where.totalExperienceMonths.lte = filter.maxExperienceMonths;
-      }
-    }
-
-    if (
       filter.minSpecialtyExperienceMonths !== undefined ||
       filter.maxSpecialtyExperienceMonths !== undefined
     ) {
@@ -574,19 +501,6 @@ export class EmployeesService extends BaseService<
       if (filter.maxSpecialtyExperienceMonths !== undefined) {
         where.specialtyExperienceMonths.lte =
           filter.maxSpecialtyExperienceMonths;
-      }
-    }
-
-    // Birth date
-    if (filter.birthDateFrom || filter.birthDateTo) {
-      where.birthDate = {};
-
-      if (filter.birthDateFrom) {
-        where.birthDate.gte = new Date(filter.birthDateFrom);
-      }
-
-      if (filter.birthDateTo) {
-        where.birthDate.lte = new Date(filter.birthDateTo);
       }
     }
 
@@ -615,6 +529,54 @@ export class EmployeesService extends BaseService<
     return where;
   }
 
+  private containsInsensitive(value: string): Prisma.StringFilter {
+    return {
+      contains: value,
+      mode: 'insensitive',
+    };
+  }
+
+  private matchSearchToken(token: string): Prisma.EmployeeWhereInput {
+    const contains = this.containsInsensitive(token);
+    const compact = token.replace(/[\s\-()]/g, '');
+    const compactContains =
+      compact && compact !== token ? this.containsInsensitive(compact) : null;
+
+    const or: Prisma.EmployeeWhereInput[] = [
+      { account: { firstName: contains } },
+      { account: { lastName: contains } },
+      { account: { middleName: contains } },
+      { account: { email: contains } },
+      { phone: contains },
+      { pinfl: contains },
+      { passportSeries: contains },
+      { passportNumber: contains },
+      { employeeNumber: contains },
+    ];
+
+    if (compactContains) {
+      or.push(
+        { phone: compactContains },
+        { pinfl: compactContains },
+        { passportSeries: compactContains },
+        { passportNumber: compactContains },
+        { employeeNumber: compactContains },
+      );
+    }
+
+    const passportParts = compact.match(/^([A-Za-zА-Яа-яЁё]+)(\d+)$/);
+    if (passportParts) {
+      or.push({
+        AND: [
+          { passportSeries: this.containsInsensitive(passportParts[1]) },
+          { passportNumber: this.containsInsensitive(passportParts[2]) },
+        ],
+      });
+    }
+
+    return { OR: or };
+  }
+
   private buildEmployeeOrderBy(
     sortBy?: EmployeeFilterSort,
   ): Prisma.EmployeeOrderByWithRelationInput {
@@ -626,12 +588,12 @@ export class EmployeesService extends BaseService<
 
       case EmployeeFilterSort.MostExperienced:
         return {
-          totalExperienceMonths: 'desc',
+          specialtyExperienceMonths: 'desc',
         };
 
       case EmployeeFilterSort.LeastExperienced:
         return {
-          totalExperienceMonths: 'asc',
+          specialtyExperienceMonths: 'asc',
         };
 
       case EmployeeFilterSort.LastUpdated:

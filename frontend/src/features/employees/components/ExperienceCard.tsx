@@ -1,4 +1,5 @@
 import { Button } from '../../../components/ui/Button.tsx';
+import { Checkbox } from '../../../components/ui/Checkbox.tsx';
 import { DateField } from '../../../components/ui/DateField.tsx';
 import { Input } from '../../../components/ui/Input.tsx';
 import { Select } from '../../../components/ui/Select.tsx';
@@ -153,20 +154,17 @@ export function ExperienceCard({
           error={errors[`experience-${index}-end`]}
           onChange={(value) => onChange({ ...item, endDate: value })}
         />
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={item.isCurrent}
-            onChange={(event) =>
-              onChange({
-                ...item,
-                isCurrent: event.target.checked,
-                endDate: event.target.checked ? '' : item.endDate,
-              })
-            }
-          />
-          Текущее место работы
-        </label>
+        <Checkbox
+          label="Текущее место работы"
+          checked={item.isCurrent}
+          onChange={(checked) =>
+            onChange({
+              ...item,
+              isCurrent: checked,
+              endDate: checked ? '' : item.endDate,
+            })
+          }
+        />
       </div>
       <div className="md:col-span-2">
         <Input

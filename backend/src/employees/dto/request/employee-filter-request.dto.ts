@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 import {
@@ -18,24 +19,33 @@ export class EmployeeFilterDto {
   @ApiPropertyOptional({
     example: 'Алишер',
     description:
-      'Поиск по имени, фамилии, отчеству, email, табельному номеру или ПИНФЛ',
+      'Поиск по ФИО, табельному номеру, ПИНФЛ, телефону, email, серии и номеру паспорта. Совпадение по вхождению, не только точное.',
   })
   @IsOptional()
   @IsString()
   searchTerm?: string;
 
-  // Employee identifiers
+  // Reference filters
   @ApiPropertyOptional({
-    example: [1, 2, 3],
-    description: 'Список идентификаторов сотрудников',
+    example: [1, 2],
+    description: 'Фильтр по странам',
     type: [Number],
   })
   @IsOptional()
   @IsArray()
   @IsInt({ each: true })
-  employeeIds?: number[];
+  countryIds?: number[];
 
-  // Reference filters
+  @ApiPropertyOptional({
+    example: [1, 2],
+    description: 'Фильтр по городам',
+    type: [Number],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  cityIds?: number[];
+
   @ApiPropertyOptional({
     example: [1, 2],
     description: 'Фильтр по подразделениям',
@@ -108,26 +118,6 @@ export class EmployeeFilterDto {
 
   // Experience
   @ApiPropertyOptional({
-    example: 60,
-    description: 'Минимальный общий трудовой стаж в месяцах',
-    minimum: 0,
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  minExperienceMonths?: number;
-
-  @ApiPropertyOptional({
-    example: 180,
-    description: 'Максимальный общий трудовой стаж в месяцах',
-    minimum: 0,
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  maxExperienceMonths?: number;
-
-  @ApiPropertyOptional({
     example: 36,
     description: 'Минимальный стаж по специальности в месяцах',
     minimum: 0,
@@ -148,26 +138,6 @@ export class EmployeeFilterDto {
   maxSpecialtyExperienceMonths?: number;
 
   // Dates
-  @ApiPropertyOptional({
-    example: '1985-01-01',
-    description: 'Дата рождения от',
-    type: String,
-    format: 'date',
-  })
-  @IsOptional()
-  @IsDateString()
-  birthDateFrom?: string;
-
-  @ApiPropertyOptional({
-    example: '2000-12-31',
-    description: 'Дата рождения до',
-    type: String,
-    format: 'date',
-  })
-  @IsOptional()
-  @IsDateString()
-  birthDateTo?: string;
-
   @ApiPropertyOptional({
     example: '2020-01-01',
     description: 'Дата приема на работу от',
@@ -213,6 +183,7 @@ export class EmployeeFilterDto {
     description: 'Порядок сортировки результатов',
   })
   @IsOptional()
+  @Type(() => Number)
   @IsEnum(EmployeeFilterSort)
   sortBy?: EmployeeFilterSort;
 }

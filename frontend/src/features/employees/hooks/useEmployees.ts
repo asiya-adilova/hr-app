@@ -11,13 +11,20 @@ export function useEmployees(employeeId?: number | null) {
   const [employee, setEmployee] = useState<EmployeeDetails | null>(null);
   const [loading, setLoading] = useState(Boolean(employeeId));
   const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     if (!employeeId) {
+      setEmployee(null);
+      setLoading(false);
+      setError(null);
       return;
     }
 
     let active = true;
+    setEmployee((current) => (current?.id === employeeId ? current : null));
+    setLoading(true);
+    setError(null);
 
     employeeApi
       .getById(employeeId)
@@ -40,9 +47,13 @@ export function useEmployees(employeeId?: number | null) {
     return () => {
       active = false;
     };
-  }, [employeeId]);
+  }, [employeeId, reloadToken]);
 
-  return { employee, loading, error };
+  function reload() {
+    setReloadToken((token) => token + 1);
+  }
+
+  return { employee, loading, error, reload };
 }
 
 const emptyPaging: PageInfo = {
@@ -52,7 +63,11 @@ const emptyPaging: PageInfo = {
   totalPages: 1,
 };
 
-export function useEmployeeList(filter: EmployeeFilter, pageIndex: number) {
+export function useEmployeeList(
+  filter: EmployeeFilter,
+  pageIndex: number,
+  refreshToken = 0,
+) {
   const [rows, setRows] = useState<EmployeeTableItem[]>([]);
   const [paging, setPaging] = useState<PageInfo>(emptyPaging);
   const [loading, setLoading] = useState(true);
@@ -84,7 +99,7 @@ export function useEmployeeList(filter: EmployeeFilter, pageIndex: number) {
     return () => {
       active = false;
     };
-  }, [filter, pageIndex]);
+  }, [filter, pageIndex, refreshToken]);
 
   return { rows, paging, loading, error };
 }

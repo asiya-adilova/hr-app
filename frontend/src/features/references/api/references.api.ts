@@ -1,11 +1,21 @@
 import { apiRequest } from '../../../services/api-client.ts';
 import type { CityItem, ReferenceItem, ReferenceMap } from '../types/references.ts';
 
-async function getList(path: string) {
-  return apiRequest<ReferenceItem[]>(path);
+async function getList<T extends ReferenceItem>(path: string, search?: string) {
+  const term = search?.trim();
+  const query = term ? `?search=${encodeURIComponent(term)}` : '';
+  return apiRequest<T[]>(`${path}${query}`);
 }
 
 export const referencesApi = {
+  search(path: string, search?: string) {
+    return getList(path, search);
+  },
+
+  searchCities(search?: string) {
+    return getList<CityItem>('/cities', search);
+  },
+
   async getAll(): Promise<ReferenceMap> {
     const [
       genders,
@@ -30,7 +40,7 @@ export const referencesApi = {
       getList('/marital-statuses'),
       getList('/driver-license-categories'),
       getList('/countries'),
-      apiRequest<CityItem[]>('/cities'),
+      getList<CityItem>('/cities'),
     ]);
 
     return {

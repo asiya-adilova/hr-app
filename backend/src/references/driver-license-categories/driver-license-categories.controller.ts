@@ -1,5 +1,5 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { DriverLicenseCategoriesService } from './driver-license-categories.service';
 import { ReferenceResponseDto } from '../../common/dto/reference-response.dto';
 import { toApiResponse } from '../../common/response/service-result-mapper';
@@ -16,9 +16,12 @@ export class DriverLicenseCategoriesController {
 
   @Get()
   @ApiOperation({ summary: 'Список категорий водительских прав' })
+  @ApiQuery({ name: 'search', required: false, description: 'Поиск по названию' })
   @ApiDataResponse(ReferenceResponseDto, { isArray: true })
-  async getAll() {
-    return toApiResponse(await this.driverLicenseCategoriesService.getAll());
+  async getAll(@Query('search') search?: string) {
+    return toApiResponse(
+      await this.driverLicenseCategoriesService.search(search),
+    );
   }
 
   @Get(':id')

@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   children: ReactNode;
 };
 
@@ -11,6 +11,7 @@ const variants = {
   secondary:
     'bg-white text-ink-900 border border-line hover:bg-slate-50',
   ghost: 'text-ink-700 hover:bg-slate-100',
+  danger: 'bg-rose-600 text-white hover:bg-rose-700 shadow-sm shadow-rose-600/20',
 };
 
 export function Button({

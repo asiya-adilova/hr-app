@@ -1,5 +1,5 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CountriesService } from './countries.service';
 import { ReferenceResponseDto } from '../../common/dto/reference-response.dto';
 import { toApiResponse } from '../../common/response/service-result-mapper';
@@ -14,9 +14,10 @@ export class CountriesController {
 
   @Get()
   @ApiOperation({ summary: 'Список стран' })
+  @ApiQuery({ name: 'search', required: false, description: 'Поиск по названию' })
   @ApiDataResponse(ReferenceResponseDto, { isArray: true })
-  async getAll() {
-    return toApiResponse(await this.countriesService.getAll());
+  async getAll(@Query('search') search?: string) {
+    return toApiResponse(await this.countriesService.search(search));
   }
 
   @Get(':id')

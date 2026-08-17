@@ -3,8 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { routes } from '../../../constants/routes.ts';
 import { ApiError } from '../../../services/api-client.ts';
 import { useAuth } from '../../auth/hooks/useAuth.ts';
-import { employeeApi } from '../api/employee.api.ts';
 import { EmployeeForm } from '../components/EmployeeForm.tsx';
+import { saveEmployeeFormStep } from '../helpers/save-employee-form-step.ts';
 import { useEmployees } from '../hooks/useEmployees.ts';
 
 export function EditEmployeePage() {
@@ -44,39 +44,7 @@ export function EditEmployeePage() {
           setSubmitting(true);
           setSubmitError(null);
           try {
-            const updatePayload: Partial<typeof payload> = { ...payload };
-            delete updatePayload.accountId;
-            delete updatePayload.militaryService;
-            delete updatePayload.hasDriverLicense;
-            delete updatePayload.driverLicenseCategoryId;
-            delete updatePayload.additionalInfo;
-
-            if (step === 0 || step === 1) {
-              await employeeApi.update(employee.id, {
-                ...updatePayload,
-                formStep: step + 1,
-              });
-            }
-
-            if (step === 2) {
-              await employeeApi.update(employee.id, { formStep: 3 });
-            }
-
-            if (step === 3) {
-              await employeeApi.update(employee.id, { formStep: 4 });
-            }
-
-            if (step === 4) {
-              await employeeApi.update(employee.id, {
-                militaryService: payload.militaryService,
-                hasDriverLicense: payload.hasDriverLicense,
-                driverLicenseCategoryId: payload.hasDriverLicense
-                  ? payload.driverLicenseCategoryId
-                  : undefined,
-                additionalInfo: payload.additionalInfo,
-                formStep: 5,
-              });
-            }
+            await saveEmployeeFormStep(employee.id, step, payload);
           } catch (caught) {
             setSubmitError(
               caught instanceof ApiError ? caught.message : 'Не удалось сохранить',

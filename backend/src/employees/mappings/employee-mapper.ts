@@ -103,11 +103,8 @@ export const employeeTableInclude = {
   account: true,
   department: true,
   position: true,
-  educations: {
-    where: { isDeleted: false },
-    include: { educationLevel: true },
-    orderBy: { graduationYear: 'desc' as const },
-  },
+  country: true,
+  city: true,
 } as const;
 
 export type EmployeeWithLookups = EmployeeRecord & {
@@ -126,10 +123,8 @@ export type EmployeeWithLookups = EmployeeRecord & {
 export type EmployeeWithTableReferences = EmployeeRecord & {
   department: NamedReference | null;
   position: NamedReference | null;
-  educations: Array<{
-    graduationYear: number;
-    educationLevel: NamedReference | null;
-  }>;
+  country: NamedReference;
+  city: NamedReference;
 };
 
 export class EmployeeMapper {
@@ -197,19 +192,15 @@ export class EmployeeMapper {
       id: employee.id,
       accountId: employee.accountId,
       employeeNumber: employee.employeeNumber,
-      firstName: employee.account.firstName,
-      lastName: employee.account.lastName,
-      middleName: employee.account.middleName ?? undefined,
       fullName: EmployeeMapper.toFullName(employee.account),
       departmentName: employee.department?.name ?? '—',
       positionName: employee.position?.name ?? '—',
-      educationLevelName: employee.educations[0]?.educationLevel?.name ?? '—',
+      cityName: employee.city?.name ?? undefined,
+      countryName: employee.country?.name ?? undefined,
       hireDate: employee.hireDate ?? undefined,
-      totalExperienceMonths: employee.totalExperienceMonths,
+      phone: employee.phone,
       specialtyExperienceMonths:
         employee.specialtyExperienceMonths ?? undefined,
-      hasDriverLicense: employee.hasDriverLicense,
-      militaryService: employee.militaryService,
       createdAt: employee.createdAt,
       updatedAt: employee.updatedAt,
     };

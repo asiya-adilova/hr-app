@@ -8,7 +8,7 @@ import type {
   RelativeItem,
   WorkExperienceItem,
 } from '../types/employee.ts';
-import type { EmployeeFilter } from '../types/employee-filter.ts';
+import type { EmployeeFilterPayload } from '../types/employee-filter.ts';
 
 export const employeeApi = {
   getById(id: number) {
@@ -21,7 +21,7 @@ export const employeeApi = {
     );
   },
 
-  filter(filter: EmployeeFilter, pageIndex = 1, pageSize = 20) {
+  filter(filter: EmployeeFilterPayload, pageIndex = 1, pageSize = 20) {
     return apiRequest<PagedResult<EmployeeTableItem>>(
       `/employees/filter?pageIndex=${pageIndex}&pageSize=${pageSize}`,
       { method: 'POST', body: filter },
@@ -39,6 +39,12 @@ export const employeeApi = {
     return apiRequest<EmployeeDetails>(`/employees/${id}`, {
       method: 'PUT',
       body: payload,
+    });
+  },
+
+  remove(id: number) {
+    return apiRequest<void>(`/employees/${id}`, {
+      method: 'DELETE',
     });
   },
 

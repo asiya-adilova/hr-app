@@ -132,6 +132,20 @@ export abstract class BaseService<
     );
   }
 
+  async search(name?: string): Promise<ServiceResult<TResponse[]>> {
+    const term = name?.trim();
+    if (!term) {
+      return this.getAll();
+    }
+
+    return this.getAll({
+      name: {
+        contains: term,
+        mode: 'insensitive',
+      },
+    });
+  }
+
   async getAllPaged(
     pageSize: number,
     pageIndex: number,

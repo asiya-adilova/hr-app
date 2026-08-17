@@ -7,7 +7,7 @@ import {
   toDateInput,
 } from '../../utils/date.ts';
 import { todayIsoDate } from '../../utils/validation.ts';
-import { SelectChevron } from './Select.tsx';
+import { Select } from './Select.tsx';
 
 type DateFieldProps = {
   label?: string;
@@ -18,6 +18,8 @@ type DateFieldProps = {
   min?: string;
   max?: string;
   disabled?: boolean;
+  clearable?: boolean;
+  menuAlign?: 'left' | 'right';
   onChange: (value: string) => void;
 };
 
@@ -36,6 +38,8 @@ export function DateField({
   min,
   max,
   disabled,
+  clearable,
+  menuAlign = 'left',
   onChange,
 }: DateFieldProps) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -63,9 +67,14 @@ export function DateField({
     }
 
     function onPointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
+      const target = event.target as Element;
+      if (
+        rootRef.current?.contains(target) ||
+        target.closest('.select-menu')
+      ) {
+        return;
       }
+      setOpen(false);
     }
 
     function onKeyDown(event: KeyboardEvent) {
@@ -115,15 +124,15 @@ export function DateField({
           disabled={disabled}
           onClick={toggleOpen}
           className={`flex w-full items-center justify-between rounded-xl border bg-white px-3.5 py-2.5 text-left text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:bg-page disabled:text-ink-500 ${
-            message ? 'border-rose-400' : 'border-line'
-          }`}
+            clearable && value ? 'pr-16' : ''
+          } ${message ? 'border-rose-400' : 'border-line'}`}
         >
-          <span className={value ? 'text-ink-900' : 'text-slate-400'}>
+          <span className={`truncate ${value ? 'text-ink-900' : 'text-slate-400'}`}>
             {value ? formatDate(value) : 'ДД.ММ.ГГГГ'}
           </span>
           <svg
             viewBox="0 0 24 24"
-            className="h-4 w-4 text-brand-600"
+            className="h-4 w-4 shrink-0 text-brand-600"
             fill="none"
             stroke="currentColor"
             strokeWidth="1.8"
@@ -135,51 +144,60 @@ export function DateField({
             <path d="M8 3v4M16 3v4M3 10h18" />
           </svg>
         </button>
+        {clearable && value && !disabled ? (
+          <button
+            type="button"
+            aria-label="Очистить"
+            className="absolute right-9 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-ink-500 transition hover:bg-slate-100 hover:text-ink-700"
+            onClick={() => onChange('')}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        ) : null}
 
         {open && !disabled ? (
           <div
-            className="absolute z-30 mt-2 w-full rounded-2xl border border-line bg-white p-3 shadow-lg"
+            className={`absolute z-30 mt-2 w-full min-w-[16.5rem] rounded-2xl border border-line bg-white p-3 shadow-lg ${
+              menuAlign === 'right' ? 'right-0' : 'left-0'
+            }`}
             onPointerDown={(event) => event.stopPropagation()}
           >
-            <div className="mb-3 grid grid-cols-[1fr_5.5rem] gap-2">
-              <span className="relative block">
-                <select
-                  value={view.month}
-                  className="w-full appearance-none rounded-xl border border-line bg-white px-3 py-2 pr-8 text-sm font-medium text-ink-900 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10"
-                  onChange={(event) =>
-                    setView((current) => ({
-                      ...current,
-                      month: Number(event.target.value),
-                    }))
-                  }
-                >
-                  {MONTH_LABELS.map((name, index) => (
-                    <option key={name} value={index + 1}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-                <SelectChevron className="right-2.5 h-3.5 w-3.5" />
-              </span>
-              <span className="relative block">
-                <select
-                  value={view.year}
-                  className="w-full appearance-none rounded-xl border border-line bg-white px-3 py-2 pr-8 text-sm font-medium text-ink-900 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10"
-                  onChange={(event) =>
-                    setView((current) => ({
-                      ...current,
-                      year: Number(event.target.value),
-                    }))
-                  }
-                >
-                  {years.map((year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
-                <SelectChevron className="right-2.5 h-3.5 w-3.5" />
-              </span>
+            <div className="mb-3 grid grid-cols-[1fr_6.5rem] gap-2">
+              <Select
+                value={view.month}
+                placeholder=""
+                options={MONTH_LABELS.map((name, index) => ({
+                  value: index + 1,
+                  label: name,
+                }))}
+                onChange={(event) =>
+                  setView((current) => ({
+                    ...current,
+                    month: Number(event.target.value),
+                  }))
+                }
+              />
+              <Select
+                value={view.year}
+                placeholder=""
+                options={years.map((year) => ({ value: year, label: String(year) }))}
+                onChange={(event) =>
+                  setView((current) => ({
+                    ...current,
+                    year: Number(event.target.value),
+                  }))
+                }
+              />
             </div>
 
             <div className="mb-1 grid grid-cols-7 text-center text-[11px] font-semibold uppercase tracking-wide text-ink-500">
