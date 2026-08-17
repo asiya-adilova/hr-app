@@ -47,6 +47,7 @@ export function Sidebar({ className = '', onNavigate }: SidebarProps) {
             {employeeId ? (
               <NavLink
                 to={routes.employeeDetails(employeeId)}
+                end
                 className={linkClass}
               >
                 Мой профиль

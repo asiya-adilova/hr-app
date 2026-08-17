@@ -31,6 +31,15 @@ export type WorkExperienceItem = {
   responsibilities?: string;
 };
 
+export type RelativeItem = {
+  id?: number;
+  fullName: string;
+  relationshipType: string;
+  birthDate?: string;
+  occupation?: string;
+  phone?: string;
+};
+
 export type EmployeeDetails = {
   id: number;
   accountId: number;
@@ -68,6 +77,7 @@ export type EmployeeDetails = {
   };
   education: EducationItem[];
   workExperience: WorkExperienceItem[];
+  relatives: RelativeItem[];
   driverLicense: {
     hasLicense: boolean;
     categoryId?: number;

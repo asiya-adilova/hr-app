@@ -28,6 +28,7 @@ import type {
 } from '../types/employee.ts';
 import { EducationCard, type EducationCardItem } from './EducationCard.tsx';
 import { ExperienceCard, type ExperienceCardItem } from './ExperienceCard.tsx';
+import { RelativeCard, type RelativeCardItem } from './RelativeCard.tsx';
 import { CountryCityFields } from './CountryCityFields.tsx';
 
 const steps = [
@@ -35,7 +36,7 @@ const steps = [
   { title: 'Работа', hint: 'Должность и условия работы' },
   { title: 'Опыт работы', hint: 'Предыдущие места работы' },
   { title: 'Образование', hint: 'Учебные заведения' },
-  { title: 'Дополнительно', hint: 'Военная служба и права' },
+  { title: 'Дополнительно', hint: 'Военная служба, права и родственники' },
 ];
 
 const YES_NO_OPTIONS = [
@@ -69,6 +70,7 @@ type FormValues = {
   additionalInfo: string;
   educations: EducationCardItem[];
   workExperiences: ExperienceCardItem[];
+  relatives: RelativeCardItem[];
 };
 
 type EmployeeFormProps = {
@@ -114,6 +116,19 @@ function emptyExperience(): ExperienceCardItem {
     endDate: '',
     isCurrent: false,
     responsibilities: '',
+    view: false,
+    expanded: false,
+  };
+}
+
+function emptyRelative(): RelativeCardItem {
+  return {
+    key: nextItemKey(),
+    fullName: '',
+    relationshipType: '',
+    occupation: '',
+    birthDate: '',
+    phone: '',
     view: false,
     expanded: false,
   };
@@ -210,6 +225,19 @@ function fromInitial(
           expanded: false,
         }))
       : [],
+    relatives: initial?.relatives?.length
+      ? initial.relatives.map((item) => ({
+          key: item.id ? `relative-${item.id}` : nextItemKey(),
+          id: item.id,
+          fullName: item.fullName,
+          relationshipType: item.relationshipType,
+          occupation: item.occupation ?? '',
+          birthDate: item.birthDate?.toString().slice(0, 10) ?? '',
+          phone: item.phone ?? '',
+          view: Boolean(item.id),
+          expanded: false,
+        }))
+      : [],
   };
 }
 
@@ -218,6 +246,7 @@ function cloneFormValues(values: FormValues): FormValues {
     ...values,
     educations: values.educations.map((item) => ({ ...item })),
     workExperiences: values.workExperiences.map((item) => ({ ...item })),
+    relatives: values.relatives.map((item) => ({ ...item })),
   };
 }
 
@@ -275,6 +304,10 @@ function snapshotForStep(step: number, values: FormValues) {
     driverLicenseCategoryId:
       values.hasDriverLicense === 'true' ? values.driverLicenseCategoryId : '',
     additionalInfo: values.additionalInfo,
+    relatives: values.relatives.map((item) => ({
+      id: item.id ?? null,
+      view: item.view,
+    })),
   };
 }
 
@@ -381,6 +414,56 @@ function addEducationFieldErrors(
   }
 }
 
+const DUPLICATE_RELATIVE_MESSAGE =
+  'Родственник с такими данными уже существует';
+
+function addRelativeFieldErrors(
+  item: RelativeCardItem,
+  index: number,
+  nextErrors: Record<string, string>,
+) {
+  if (!item.fullName.trim()) {
+    nextErrors[`relative-${index}-name`] = 'Обязательно';
+  }
+  if (!item.relationshipType) {
+    nextErrors[`relative-${index}-relationship`] = 'Обязательно';
+  }
+  if (!item.occupation.trim()) {
+    nextErrors[`relative-${index}-occupation`] = 'Обязательно';
+  }
+  if (!item.birthDate) {
+    nextErrors[`relative-${index}-birthDate`] = 'Обязательно';
+  } else if (item.birthDate > todayIsoDate()) {
+    nextErrors[`relative-${index}-birthDate`] = 'Дата рождения не может быть в будущем';
+  }
+  if (!item.phone) {
+    nextErrors[`relative-${index}-phone`] = 'Обязательно';
+  } else if (!isValidPhone(item.phone)) {
+    nextErrors[`relative-${index}-phone`] = 'Укажите корректный номер телефона';
+  }
+}
+
+function addRelativeDuplicateErrors(
+  items: RelativeCardItem[],
+  nextErrors: Record<string, string>,
+) {
+  const seen = new Map<string, number>();
+
+  items.forEach((item, index) => {
+    const key = `${item.fullName.trim().toLowerCase()}|${item.relationshipType}`;
+    if (!item.fullName.trim() || !item.relationshipType) {
+      return;
+    }
+    const firstIndex = seen.get(key);
+    if (firstIndex !== undefined) {
+      nextErrors[`relative-${firstIndex}-duplicate`] = DUPLICATE_RELATIVE_MESSAGE;
+      nextErrors[`relative-${index}-duplicate`] = DUPLICATE_RELATIVE_MESSAGE;
+      return;
+    }
+    seen.set(key, index);
+  });
+}
+
 function initialMaxReached(formStep?: number) {
   if (!formStep) {
     return 0;
@@ -477,6 +560,12 @@ export function EmployeeForm({
     setField('educations', educations);
   }
 
+  function patchRelative(index: number, item: RelativeCardItem) {
+    const relatives = [...values.relatives];
+    relatives[index] = item;
+    setField('relatives', relatives);
+  }
+
   function experiencePayload(item: ExperienceCardItem) {
     return {
       companyName: item.companyName,
@@ -498,6 +587,16 @@ export function EmployeeForm({
       countryId: Number(item.countryId),
       cityId: Number(item.cityId),
       graduationYear: Number(item.graduationYear),
+    };
+  }
+
+  function relativePayload(item: RelativeCardItem) {
+    return {
+      fullName: item.fullName.trim(),
+      relationshipType: item.relationshipType,
+      occupation: item.occupation.trim(),
+      birthDate: item.birthDate,
+      phone: item.phone,
     };
   }
 
@@ -623,6 +722,69 @@ export function EmployeeForm({
     }
   }
 
+  async function commitRelativeItem(
+    employeeId: number,
+    item: RelativeCardItem,
+  ): Promise<RelativeCardItem> {
+    const committed = savedValues.relatives.find((entry) => entry.key === item.key);
+    const unchanged =
+      Boolean(item.id) &&
+      committed &&
+      JSON.stringify(relativePayload(item)) === JSON.stringify(relativePayload(committed));
+
+    if (unchanged) {
+      return { ...item, view: true, expanded: false };
+    }
+
+    const saved = item.id
+      ? await employeeApi.updateRelative(employeeId, item.id, relativePayload(item))
+      : await employeeApi.addRelative(employeeId, relativePayload(item));
+
+    return {
+      ...item,
+      id: saved.id,
+      fullName: saved.fullName,
+      relationshipType: saved.relationshipType,
+      occupation: saved.occupation ?? '',
+      birthDate: saved.birthDate?.toString().slice(0, 10) ?? item.birthDate,
+      phone: saved.phone ?? '',
+      view: true,
+      expanded: false,
+    };
+  }
+
+  async function persistPendingRelatives(): Promise<RelativeCardItem[] | null> {
+    const employeeId = initial?.id;
+    if (!employeeId) {
+      setActionError('Сначала сохраните контактные данные');
+      return null;
+    }
+
+    let relatives = [...values.relatives];
+    setActionError(null);
+    try {
+      for (let index = 0; index < relatives.length; index += 1) {
+        const item = relatives[index];
+        if (item.view) {
+          continue;
+        }
+        setSavingKey(item.key);
+        relatives[index] = await commitRelativeItem(employeeId, item);
+      }
+      setField('relatives', relatives);
+      return relatives;
+    } catch (caught) {
+      setField('relatives', relatives);
+      setSavedValues(cloneFormValues({ ...values, relatives }));
+      setActionError(
+        caught instanceof ApiError ? caught.message : 'Не удалось сохранить родственника',
+      );
+      return null;
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
   async function saveExperience(index: number) {
     const item = values.workExperiences[index];
     const employeeId = initial?.id;
@@ -682,6 +844,36 @@ export function EmployeeForm({
     }
   }
 
+  async function saveRelative(index: number) {
+    const item = values.relatives[index];
+    const employeeId = initial?.id;
+    const nextErrors: Record<string, string> = {};
+    addRelativeFieldErrors(item, index, nextErrors);
+    addRelativeDuplicateErrors(values.relatives, nextErrors);
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0 || !employeeId) {
+      if (!employeeId) {
+        setActionError('Сначала сохраните контактные данные');
+      }
+      return;
+    }
+
+    setSavingKey(item.key);
+    setActionError(null);
+    try {
+      const relatives = [...values.relatives];
+      relatives[index] = await commitRelativeItem(employeeId, item);
+      setField('relatives', relatives);
+      setSavedValues(cloneFormValues({ ...values, relatives }));
+    } catch (caught) {
+      setActionError(
+        caught instanceof ApiError ? caught.message : 'Не удалось сохранить родственника',
+      );
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
   async function deleteExperience(index: number) {
     const item = values.workExperiences[index];
     const employeeId = initial?.id;
@@ -718,6 +910,27 @@ export function EmployeeForm({
     } catch (caught) {
       setActionError(
         caught instanceof ApiError ? caught.message : 'Не удалось удалить образование',
+      );
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  async function deleteRelative(index: number) {
+    const item = values.relatives[index];
+    const employeeId = initial?.id;
+    setActionError(null);
+    try {
+      if (item.id && employeeId) {
+        setSavingKey(item.key);
+        await employeeApi.deleteRelative(employeeId, item.id);
+      }
+      const relatives = values.relatives.filter((_, itemIndex) => itemIndex !== index);
+      setField('relatives', relatives);
+      setSavedValues(cloneFormValues({ ...values, relatives }));
+    } catch (caught) {
+      setActionError(
+        caught instanceof ApiError ? caught.message : 'Не удалось удалить родственника',
       );
     } finally {
       setSavingKey(null);
@@ -794,6 +1007,12 @@ export function EmployeeForm({
       if (values.hasDriverLicense === 'true' && !required(values.driverLicenseCategoryId)) {
         nextErrors.driverLicenseCategoryId = 'Обязательно';
       }
+      values.relatives.forEach((item, index) => {
+        if (!item.view) {
+          addRelativeFieldErrors(item, index, nextErrors);
+        }
+      });
+      addRelativeDuplicateErrors(values.relatives, nextErrors);
     }
 
     return nextErrors;
@@ -885,6 +1104,14 @@ export function EmployeeForm({
         return false;
       }
       nextValues = { ...values, educations };
+    }
+
+    if (step === 4) {
+      const relatives = await persistPendingRelatives();
+      if (!relatives) {
+        return false;
+      }
+      nextValues = { ...values, relatives };
     }
 
     if (isStepDirty(step, nextValues, savedValues) || step === 2 || step === 3) {
@@ -1185,45 +1412,74 @@ export function EmployeeForm({
       ) : null}
 
       {step === 4 ? (
-        <section className="grid gap-4 rounded-3xl border border-line bg-white p-4 md:grid-cols-2 md:p-6">
-          <Select
-            label="Проходили военную службу?"
-            value={values.militaryService}
-            options={YES_NO_OPTIONS}
-            error={fieldErrors.militaryService}
-            onChange={(event) => setField('militaryService', event.target.value)}
-          />
-          <Select
-            label="Есть водительские права?"
-            value={values.hasDriverLicense}
-            options={YES_NO_OPTIONS}
-            error={fieldErrors.hasDriverLicense}
-            onChange={(event) => {
-              setField('hasDriverLicense', event.target.value);
-              if (event.target.value !== 'true') {
-                setField('driverLicenseCategoryId', '');
-              }
-            }}
-          />
-          {values.hasDriverLicense === 'true' ? (
+        <div className="space-y-6">
+          <section className="grid gap-4 rounded-3xl border border-line bg-white p-4 md:grid-cols-2 md:p-6">
             <Select
-              label="Категория прав"
-              value={values.driverLicenseCategoryId}
-              options={options.driverLicenseCategories}
-              error={fieldErrors.driverLicenseCategoryId}
-              onChange={(event) =>
-                setField('driverLicenseCategoryId', event.target.value)
-              }
+              label="Проходили военную службу?"
+              value={values.militaryService}
+              options={YES_NO_OPTIONS}
+              error={fieldErrors.militaryService}
+              onChange={(event) => setField('militaryService', event.target.value)}
             />
-          ) : null}
-          <div className="md:col-span-2">
-            <Input
-              label="Дополнительно"
-              value={values.additionalInfo}
-              onChange={(event) => setField('additionalInfo', event.target.value)}
+            <Select
+              label="Есть водительские права?"
+              value={values.hasDriverLicense}
+              options={YES_NO_OPTIONS}
+              error={fieldErrors.hasDriverLicense}
+              onChange={(event) => {
+                setField('hasDriverLicense', event.target.value);
+                if (event.target.value !== 'true') {
+                  setField('driverLicenseCategoryId', '');
+                }
+              }}
             />
-          </div>
-        </section>
+            {values.hasDriverLicense === 'true' ? (
+              <Select
+                label="Категория прав"
+                value={values.driverLicenseCategoryId}
+                options={options.driverLicenseCategories}
+                error={fieldErrors.driverLicenseCategoryId}
+                onChange={(event) =>
+                  setField('driverLicenseCategoryId', event.target.value)
+                }
+              />
+            ) : null}
+            <div className="md:col-span-2">
+              <Input
+                label="Дополнительно"
+                value={values.additionalInfo}
+                onChange={(event) => setField('additionalInfo', event.target.value)}
+              />
+            </div>
+          </section>
+
+          <section className="space-y-4 rounded-3xl border border-line bg-white p-4 md:p-6">
+            <h2 className="text-lg font-semibold">Родственники</h2>
+            {values.relatives.map((item, index) => (
+              <RelativeCard
+                key={item.key}
+                item={item}
+                index={index}
+                errors={fieldErrors}
+                saving={savingKey === item.key}
+                onChange={(next) => patchRelative(index, next)}
+                onSave={() => void saveRelative(index)}
+                onEdit={() => patchRelative(index, { ...item, view: false })}
+                onDelete={() => void deleteRelative(index)}
+                onToggleExpand={() =>
+                  patchRelative(index, { ...item, expanded: !item.expanded })
+                }
+              />
+            ))}
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setField('relatives', [...values.relatives, emptyRelative()])}
+            >
+              Добавить родственника
+            </Button>
+          </section>
+        </div>
       ) : null}
 
       {actionError ? <p className="text-sm text-rose-600">{actionError}</p> : null}

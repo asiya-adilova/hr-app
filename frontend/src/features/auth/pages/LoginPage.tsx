@@ -8,7 +8,7 @@ export function LoginPage() {
         <PublicNav />
         <h1 className="text-2xl font-bold">Вход</h1>
         <p className="mt-2 mb-6 text-sm text-ink-500">
-          Сотрудник попадёт в личный кабинет, администратор — на панель управления.
+          Сотрудник попадёт в личный кабинет.
         </p>
         <LoginForm />
       </div>

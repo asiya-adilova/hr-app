@@ -54,7 +54,7 @@ export function EmployeeDetails({ employee }: { employee: EmployeeDetails }) {
       </section>
 
       <section className="rounded-3xl border border-line bg-white p-4 md:p-6">
-        <h2 className="mb-4 text-lg font-semibold">Работа</h2>
+        <h2 className="mb-4 text-lg font-semibold">Текущая работа</h2>
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
           <Row label="Подразделение" value={employee.department?.name} />
           <Row label="Должность" value={employee.position?.name} />
@@ -78,6 +78,34 @@ export function EmployeeDetails({ employee }: { employee: EmployeeDetails }) {
             <Row label="Дополнительно" value={employee.additionalInfo} />
           </div>
         </div>
+      </section>
+
+      <section className="rounded-3xl border border-line bg-white p-4 md:p-6">
+        <h2 className="mb-4 text-lg font-semibold">Опыт работы</h2>
+        {employee.workExperience.length ? (
+          <ul className="space-y-3">
+            {employee.workExperience.map((item) => (
+              <li key={item.id ?? item.companyName} className="rounded-2xl bg-slate-50 p-4">
+                <p className="font-medium">
+                  {item.positionName} · {item.companyName}
+                </p>
+                {(item.cityName || item.countryName) ? (
+                  <p className="text-sm text-ink-500">
+                    {[item.cityName, item.countryName].filter(Boolean).join(', ')}
+                  </p>
+                ) : null}
+                <p className="text-sm text-ink-500">
+                  {formatDate(item.startDate)} — {item.isCurrent ? 'н.в.' : formatDate(item.endDate)}
+                </p>
+                {item.responsibilities ? (
+                  <p className="mt-2 text-sm text-ink-700">{item.responsibilities}</p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-ink-500">Пока нет записей</p>
+        )}
       </section>
 
       <section className="rounded-3xl border border-line bg-white p-4 md:p-6">
@@ -106,24 +134,23 @@ export function EmployeeDetails({ employee }: { employee: EmployeeDetails }) {
       </section>
 
       <section className="rounded-3xl border border-line bg-white p-4 md:p-6">
-        <h2 className="mb-4 text-lg font-semibold">Опыт работы</h2>
-        {employee.workExperience.length ? (
+        <h2 className="mb-4 text-lg font-semibold">Родственники</h2>
+        {employee.relatives?.length ? (
           <ul className="space-y-3">
-            {employee.workExperience.map((item) => (
-              <li key={item.id ?? item.companyName} className="rounded-2xl bg-slate-50 p-4">
-                <p className="font-medium">
-                  {item.positionName} · {item.companyName}
-                </p>
-                {(item.cityName || item.countryName) ? (
-                  <p className="text-sm text-ink-500">
-                    {[item.cityName, item.countryName].filter(Boolean).join(', ')}
+            {employee.relatives.map((item) => (
+              <li key={item.id ?? item.fullName} className="rounded-2xl bg-slate-50 p-4">
+                <p className="font-medium">{item.fullName}</p>
+                <p className="text-sm text-ink-500">{item.relationshipType}</p>
+                {item.occupation ? (
+                  <p className="mt-1 text-sm text-ink-500">{item.occupation}</p>
+                ) : null}
+                {item.birthDate ? (
+                  <p className="mt-1 text-sm text-ink-500">
+                    Дата рождения: {formatDate(item.birthDate)}
                   </p>
                 ) : null}
-                <p className="text-sm text-ink-500">
-                  {formatDate(item.startDate)} — {item.isCurrent ? 'н.в.' : formatDate(item.endDate)}
-                </p>
-                {item.responsibilities ? (
-                  <p className="mt-2 text-sm text-ink-700">{item.responsibilities}</p>
+                {item.phone ? (
+                  <p className="mt-1 text-sm text-ink-500">{item.phone}</p>
                 ) : null}
               </li>
             ))}

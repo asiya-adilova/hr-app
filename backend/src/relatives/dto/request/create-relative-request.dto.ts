@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
 } from 'class-validator';
 
@@ -56,5 +57,8 @@ export class CreateRelativeDto {
   @IsOptional()
   @IsString()
   @MaxLength(30)
+  @Matches(/^\+[1-9]\d{7,14}$/, {
+    message: 'Укажите корректный номер телефона в международном формате',
+  })
   phone?: string;
 }

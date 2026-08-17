@@ -5,6 +5,7 @@ import type {
   EducationItem,
   EmployeeDetails,
   EmployeeTableItem,
+  RelativeItem,
   WorkExperienceItem,
 } from '../types/employee.ts';
 import type { EmployeeFilter } from '../types/employee-filter.ts';
@@ -108,6 +109,30 @@ export const employeeApi = {
 
   deleteEducation(employeeId: number, id: number) {
     return apiRequest<void>(`/employees/${employeeId}/educations/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  addRelative(employeeId: number, payload: Omit<RelativeItem, 'id'>) {
+    return apiRequest<RelativeItem>(`/employees/${employeeId}/relatives`, {
+      method: 'POST',
+      body: payload,
+    });
+  },
+
+  updateRelative(
+    employeeId: number,
+    id: number,
+    payload: Omit<RelativeItem, 'id'>,
+  ) {
+    return apiRequest<RelativeItem>(`/employees/${employeeId}/relatives/${id}`, {
+      method: 'PUT',
+      body: payload,
+    });
+  },
+
+  deleteRelative(employeeId: number, id: number) {
+    return apiRequest<void>(`/employees/${employeeId}/relatives/${id}`, {
       method: 'DELETE',
     });
   },
