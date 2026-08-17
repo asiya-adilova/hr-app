@@ -98,7 +98,7 @@ export function SelectMenu({
   menuRef,
   id,
   minWidth = 0,
-  placement = 'down',
+  placement,
   children,
 }: {
   open: boolean;
@@ -126,17 +126,26 @@ export function SelectMenu({
         return;
       }
 
-      const width = Math.max(rect.width, minWidth);
-      const left = Math.min(rect.left, window.innerWidth - width - 8);
-      const position =
+      const viewportPad = 8;
+      const gap = 4;
+      const menuMaxHeight = 224;
+      const spaceBelow = window.innerHeight - rect.bottom - viewportPad;
+      const spaceAbove = rect.top - viewportPad;
+      const openDown =
         placement === 'up'
-          ? { top: 'auto', bottom: window.innerHeight - rect.top + 4 }
-          : { top: rect.bottom + 4, bottom: 'auto' };
+          ? spaceAbove < 72 && spaceBelow > spaceAbove
+          : spaceBelow >= 160 || spaceBelow >= spaceAbove;
+      const available = Math.max(72, openDown ? spaceBelow : spaceAbove);
+
+      const width = Math.max(rect.width, minWidth);
+      const left = Math.min(rect.left, window.innerWidth - width - viewportPad);
 
       setStyle({
-        ...position,
-        left: Math.max(8, left),
+        top: openDown ? rect.bottom + gap : 'auto',
+        bottom: openDown ? 'auto' : window.innerHeight - rect.top + gap,
+        left: Math.max(viewportPad, left),
         width,
+        maxHeight: Math.min(menuMaxHeight, available - gap),
       });
     }
 
