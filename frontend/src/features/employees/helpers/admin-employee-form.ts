@@ -129,7 +129,7 @@ export function fromEmployee(employee: EmployeeDetails): AdminFormValues {
       cityName: item.cityName,
       graduationYear: item.graduationYear,
       view: Boolean(item.id),
-      expanded: false,
+      expanded: true,
     })),
     workExperiences: employee.workExperience.map((item) => ({
       key: item.id ? `experience-${item.id}` : nextItemKey(),
@@ -157,7 +157,7 @@ export function fromEmployee(employee: EmployeeDetails): AdminFormValues {
       birthDate: item.birthDate?.toString().slice(0, 10) ?? '',
       phone: item.phone ?? '',
       view: Boolean(item.id),
-      expanded: false,
+      expanded: true,
     })),
   };
 }

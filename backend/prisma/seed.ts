@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client';
 import { seedAdmin } from './seed-admin';
+import { seedEmployees } from './seed-employees';
 
 const prisma: PrismaClient = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -197,7 +198,7 @@ async function main() {
     Грузия: ['Тбилиси', 'Батуми', 'Кутаиси'],
     Китай: ['Пекин', 'Шанхай', 'Урумчи', 'Гуанчжоу'],
     Турция: ['Анкара', 'Стамбул', 'Измир', 'Анталья'],
-    'ОАЭ': ['Абу-Даби', 'Дубай', 'Шарджа'],
+    ОАЭ: ['Абу-Даби', 'Дубай', 'Шарджа'],
     США: ['Вашингтон', 'Нью-Йорк', 'Лос-Анджелес', 'Чикаго'],
     Другое: ['Другой город'],
   };
@@ -208,7 +209,9 @@ async function main() {
   });
 
   const countries = await prisma.country.findMany();
-  const countryIdByName = new Map(countries.map((country) => [country.name, country.id]));
+  const countryIdByName = new Map(
+    countries.map((country) => [country.name, country.id]),
+  );
 
   await prisma.city.createMany({
     data: Object.entries(citiesByCountry).flatMap(([countryName, cities]) => {
@@ -224,6 +227,7 @@ async function main() {
   console.log('Reference data seeded successfully!');
 
   await seedAdmin(prisma);
+  await seedEmployees(prisma);
 }
 
 main()

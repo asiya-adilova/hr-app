@@ -218,7 +218,7 @@ export function EmployeeAdminEditor({
         countryName: saved.countryName,
         cityName: saved.cityName,
         view: true,
-        expanded: false,
+        expanded: true,
       };
       setField('educations', educations);
       onSaved?.();
@@ -257,7 +257,7 @@ export function EmployeeAdminEditor({
         birthDate: saved.birthDate?.toString().slice(0, 10) ?? item.birthDate,
         phone: saved.phone ?? '',
         view: true,
-        expanded: false,
+        expanded: true,
       };
       setField('relatives', relatives);
       onSaved?.();
