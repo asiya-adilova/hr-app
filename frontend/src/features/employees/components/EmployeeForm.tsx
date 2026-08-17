@@ -15,6 +15,7 @@ import {
   isValidPhone,
   lettersOnly,
   required,
+  todayIsoDate,
 } from '../../../utils/validation.ts';
 import { useReferences } from '../../references/hooks/useReferences.ts';
 import type {
@@ -61,7 +62,16 @@ type FormValues = {
   hasDriverLicense: string;
   additionalInfo: string;
   educations: Array<Omit<EducationItem, 'id'>>;
-  workExperiences: Array<Omit<WorkExperienceItem, 'id'>>;
+  workExperiences: WorkExperienceFormItem[];
+};
+
+type WorkExperienceFormItem = {
+  companyName: string;
+  positionId: string;
+  startDate: string;
+  endDate: string;
+  isCurrent: boolean;
+  responsibilities: string;
 };
 
 type EmployeeFormProps = {
@@ -75,21 +85,45 @@ type EmployeeFormProps = {
     educations: Array<Omit<EducationItem, 'id'>>;
     workExperiences: Array<Omit<WorkExperienceItem, 'id'>>;
   }) => Promise<boolean | void>;
+  onComplete?: () => void;
 };
 
 function emptyEducation() {
   return { institutionName: '', specialty: '', graduationYear: new Date().getFullYear() };
 }
 
-function emptyExperience() {
+function emptyExperience(): WorkExperienceFormItem {
   return {
     companyName: '',
-    position: '',
+    positionId: '',
     startDate: '',
     endDate: '',
     isCurrent: false,
     responsibilities: '',
   };
+}
+
+const DUPLICATE_EXPERIENCE_MESSAGE =
+  'Нельзя указать один и тот же опыт работы несколько раз';
+
+function experiencePeriod(item: WorkExperienceFormItem) {
+  const company = item.companyName.trim().toLowerCase();
+  const positionId = item.positionId.trim();
+  const startDate = item.startDate.slice(0, 10);
+  const endDate = item.isCurrent ? todayIsoDate() : (item.endDate ?? '').slice(0, 10);
+
+  if (!company || !positionId || !startDate || !endDate || startDate > endDate) {
+    return null;
+  }
+
+  return { company, positionId, startDate, endDate };
+}
+
+function periodsOverlap(
+  first: { startDate: string; endDate: string },
+  second: { startDate: string; endDate: string },
+) {
+  return first.startDate <= second.endDate && second.startDate <= first.endDate;
 }
 
 function fromInitial(
@@ -135,7 +169,7 @@ function fromInitial(
     workExperiences: initial?.workExperience.length
       ? initial.workExperience.map((item) => ({
           companyName: item.companyName,
-          position: item.position,
+          positionId: item.positionId ? String(item.positionId) : '',
           startDate: item.startDate?.toString().slice(0, 10) ?? '',
           endDate: item.endDate?.toString().slice(0, 10) ?? '',
           isCurrent: item.isCurrent,
@@ -145,6 +179,88 @@ function fromInitial(
   };
 }
 
+function cloneFormValues(values: FormValues): FormValues {
+  return {
+    ...values,
+    educations: values.educations.map((item) => ({ ...item })),
+    workExperiences: values.workExperiences.map((item) => ({ ...item })),
+  };
+}
+
+function snapshotForStep(step: number, values: FormValues) {
+  if (step === 0) {
+    return {
+      birthDate: values.birthDate,
+      pinfl: values.pinfl,
+      passportSeries: values.passportSeries,
+      passportNumber: values.passportNumber,
+      passportExpireDate: values.passportExpireDate,
+      passportIssuedBy: values.passportIssuedBy,
+      phone: values.phone,
+      address: values.address,
+      genderId: values.genderId,
+      citizenshipId: values.citizenshipId,
+      nationalityId: values.nationalityId,
+      maritalStatusId: values.maritalStatusId,
+    };
+  }
+
+  if (step === 1) {
+    return {
+      employeeNumber: values.employeeNumber,
+      hireDate: values.hireDate,
+      departmentId: values.departmentId,
+      positionId: values.positionId,
+      employmentTypeId: values.employmentTypeId,
+    };
+  }
+
+  if (step === 2) {
+    return {
+      workExperiences: values.workExperiences.map((item) => ({
+        companyName: item.companyName,
+        positionId: item.positionId,
+        startDate: item.startDate,
+        endDate: item.isCurrent ? '' : (item.endDate ?? ''),
+        isCurrent: item.isCurrent,
+        responsibilities: (item.responsibilities ?? '').trim(),
+      })),
+    };
+  }
+
+  if (step === 3) {
+    return {
+      educationLevelId: values.educationLevelId,
+      educations: values.educations,
+    };
+  }
+
+  return {
+    militaryService: values.militaryService,
+    hasDriverLicense: values.hasDriverLicense,
+    driverLicenseCategoryId:
+      values.hasDriverLicense === 'true' ? values.driverLicenseCategoryId : '',
+    additionalInfo: values.additionalInfo,
+  };
+}
+
+function isStepDirty(step: number, current: FormValues, saved: FormValues) {
+  return (
+    JSON.stringify(snapshotForStep(step, current)) !==
+    JSON.stringify(snapshotForStep(step, saved))
+  );
+}
+
+function initialMaxReached(formStep?: number) {
+  if (!formStep) {
+    return 0;
+  }
+  if (formStep >= 5) {
+    return 4;
+  }
+  return Math.min(formStep, 4);
+}
+
 export function EmployeeForm({
   accountId,
   employeeNumberHint,
@@ -152,6 +268,7 @@ export function EmployeeForm({
   submitting,
   error,
   onSaveStep,
+  onComplete,
 }: EmployeeFormProps) {
   const { data: refs, loading, error: refsError } = useReferences();
   const [step, setStep] = useState(() => {
@@ -162,6 +279,12 @@ export function EmployeeForm({
   });
   const [values, setValues] = useState<FormValues>(() =>
     fromInitial(employeeNumberHint, initial),
+  );
+  const [savedValues, setSavedValues] = useState<FormValues>(() =>
+    fromInitial(employeeNumberHint, initial),
+  );
+  const [maxReached, setMaxReached] = useState(() =>
+    initialMaxReached(initial?.formStep),
   );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -205,7 +328,7 @@ export function EmployeeForm({
     setValues((current) => ({ ...current, [key]: value }));
   }
 
-  function validateStep(current: number): boolean {
+  function collectStepErrors(current: number) {
     const nextErrors: Record<string, string> = {};
 
     if (current === 0) {
@@ -248,18 +371,68 @@ export function EmployeeForm({
       if (!required(values.departmentId)) nextErrors.departmentId = 'Обязательно';
       if (!required(values.positionId)) nextErrors.positionId = 'Обязательно';
       if (!required(values.employmentTypeId)) nextErrors.employmentTypeId = 'Обязательно';
-      if (!required(values.educationLevelId)) nextErrors.educationLevelId = 'Обязательно';
     }
 
     if (current === 2) {
+      const overlappingIndexes = new Set<number>();
+      const periods = values.workExperiences.map((item) => experiencePeriod(item));
+
       values.workExperiences.forEach((item, index) => {
-        if (!item.companyName.trim() || !item.position.trim() || !item.startDate) {
-          nextErrors[`experience-${index}`] = 'Заполните организацию, должность и дату начала';
+        if (!item.companyName.trim()) {
+          nextErrors[`experience-${index}-company`] = 'Обязательно';
+        }
+        if (!item.positionId) {
+          nextErrors[`experience-${index}-position`] = 'Обязательно';
+        }
+        if (!item.startDate) {
+          nextErrors[`experience-${index}-start`] = 'Обязательно';
+        } else if (item.startDate > todayIsoDate()) {
+          nextErrors[`experience-${index}-start`] = 'Дата начала не может быть в будущем';
+        }
+        if (!item.isCurrent && !item.endDate) {
+          nextErrors[`experience-${index}-end`] = 'Обязательно';
+        } else if (
+          item.startDate &&
+          !item.isCurrent &&
+          item.endDate &&
+          item.startDate > item.endDate
+        ) {
+          nextErrors[`experience-${index}-end`] =
+            'Дата окончания не может быть раньше даты начала';
+        }
+        if (!item.responsibilities?.trim()) {
+          nextErrors[`experience-${index}-responsibilities`] = 'Обязательно';
         }
       });
+
+      for (let first = 0; first < periods.length; first += 1) {
+        const firstPeriod = periods[first];
+        if (!firstPeriod) {
+          continue;
+        }
+        for (let second = first + 1; second < periods.length; second += 1) {
+          const secondPeriod = periods[second];
+          if (!secondPeriod) {
+            continue;
+          }
+          if (
+            firstPeriod.company === secondPeriod.company &&
+            firstPeriod.positionId === secondPeriod.positionId &&
+            periodsOverlap(firstPeriod, secondPeriod)
+          ) {
+            overlappingIndexes.add(first);
+            overlappingIndexes.add(second);
+          }
+        }
+      }
+
+      for (const index of overlappingIndexes) {
+        nextErrors[`experience-${index}-duplicate`] = DUPLICATE_EXPERIENCE_MESSAGE;
+      }
     }
 
     if (current === 3) {
+      if (!required(values.educationLevelId)) nextErrors.educationLevelId = 'Обязательно';
       values.educations.forEach((item, index) => {
         if (!item.institutionName.trim() || !item.specialty.trim()) {
           nextErrors[`education-${index}`] = 'Заполните учебное заведение и специальность';
@@ -275,6 +448,15 @@ export function EmployeeForm({
       }
     }
 
+    return nextErrors;
+  }
+
+  function isStepValid(current: number) {
+    return Object.keys(collectStepErrors(current)).length === 0;
+  }
+
+  function validateStep(current: number): boolean {
+    const nextErrors = collectStepErrors(current);
     setFieldErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   }
@@ -316,20 +498,36 @@ export function EmployeeForm({
       employee,
       educations: values.educations,
       workExperiences: values.workExperiences.map((item) => ({
-        ...item,
+        companyName: item.companyName,
+        positionId: Number(item.positionId),
+        startDate: item.startDate,
         endDate: item.isCurrent ? undefined : item.endDate || undefined,
-        responsibilities: item.responsibilities || undefined,
+        isCurrent: item.isCurrent,
+        responsibilities: (item.responsibilities ?? '').trim(),
       })),
     };
   }
 
-  async function handleNext() {
+  async function persistCurrentStep() {
     if (!validateStep(step)) {
-      return;
+      return false;
     }
 
-    const shouldAdvance = await onSaveStep(step, buildPayload());
-    if (shouldAdvance === false) {
+    if (isStepDirty(step, values, savedValues)) {
+      const shouldAdvance = await onSaveStep(step, buildPayload());
+      if (shouldAdvance === false) {
+        return false;
+      }
+      setSavedValues(cloneFormValues(values));
+    }
+
+    setMaxReached((max) => Math.max(max, Math.min(step + 1, steps.length - 1)));
+    return true;
+  }
+
+  async function handleNext() {
+    const saved = await persistCurrentStep();
+    if (!saved) {
       return;
     }
 
@@ -337,11 +535,31 @@ export function EmployeeForm({
   }
 
   async function handleSubmit() {
-    if (!validateStep(step)) {
+    const saved = await persistCurrentStep();
+    if (!saved) {
       return;
     }
 
-    await onSaveStep(step, buildPayload());
+    onComplete?.();
+  }
+
+  async function handleSelectStep(index: number) {
+    if (index === step || submitting) {
+      return;
+    }
+
+    if (index < step) {
+      setFieldErrors({});
+      setStep(index);
+      return;
+    }
+
+    const saved = await persistCurrentStep();
+    if (!saved) {
+      return;
+    }
+
+    setStep(index);
   }
 
   if (loading) {
@@ -354,7 +572,13 @@ export function EmployeeForm({
 
   return (
     <div className="space-y-6">
-      <Stepper steps={steps} current={step} />
+      <Stepper
+        steps={steps}
+        current={step}
+        maxReached={maxReached}
+        canAdvance={isStepValid(step)}
+        onSelect={(index) => void handleSelectStep(index)}
+      />
 
       {step === 0 ? (
         <section className="grid gap-4 rounded-3xl border border-line bg-white p-4 md:grid-cols-2 md:p-6">
@@ -455,9 +679,12 @@ export function EmployeeForm({
         <section className="grid gap-4 rounded-3xl border border-line bg-white p-4 md:grid-cols-2 md:p-6">
           <Input
             label="Табельный номер"
+            autoCapitalize="characters"
             value={values.employeeNumber}
             error={fieldErrors.employeeNumber}
-            onChange={(event) => setField('employeeNumber', event.target.value)}
+            onChange={(event) =>
+              setField('employeeNumber', event.target.value.toUpperCase())
+            }
           />
           <DateField
             label="Дата приёма"
@@ -479,13 +706,20 @@ export function EmployeeForm({
             error={fieldErrors.positionId}
             onChange={(event) => setField('positionId', event.target.value)}
           />
-          <Select
-            label="Тип занятости"
-            value={values.employmentTypeId}
-            options={options.employmentTypes}
-            error={fieldErrors.employmentTypeId}
-            onChange={(event) => setField('employmentTypeId', event.target.value)}
-          />
+          <div className="md:col-span-2">
+            <Select
+              label="Тип занятости"
+              value={values.employmentTypeId}
+              options={options.employmentTypes}
+              error={fieldErrors.employmentTypeId}
+              onChange={(event) => setField('employmentTypeId', event.target.value)}
+            />
+          </div>
+        </section>
+      ) : null}
+
+      {step === 3 ? (
+        <section className="space-y-4 rounded-3xl border border-line bg-white p-4 md:p-6">
           <Select
             label="Уровень образования"
             value={values.educationLevelId}
@@ -493,11 +727,6 @@ export function EmployeeForm({
             error={fieldErrors.educationLevelId}
             onChange={(event) => setField('educationLevelId', event.target.value)}
           />
-        </section>
-      ) : null}
-
-      {step === 3 ? (
-        <section className="space-y-4 rounded-3xl border border-line bg-white p-4 md:p-6">
           {values.educations.map((item, index) => (
             <div key={index} className="grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-3">
               <Input
@@ -532,18 +761,16 @@ export function EmployeeForm({
                   setField('educations', educations);
                 }}
               />
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() =>
-                  setField(
-                    'educations',
-                    values.educations.filter((_, itemIndex) => itemIndex !== index),
-                  )
-                }
-              >
-                Удалить
-              </Button>
+              <div className="flex justify-end md:col-span-3">
+                <DeleteCardButton
+                  onClick={() =>
+                    setField(
+                      'educations',
+                      values.educations.filter((_, itemIndex) => itemIndex !== index),
+                    )
+                  }
+                />
+              </div>
             </div>
           ))}
           <Button
@@ -559,85 +786,105 @@ export function EmployeeForm({
       {step === 2 ? (
         <section className="space-y-4 rounded-3xl border border-line bg-white p-4 md:p-6">
           {values.workExperiences.map((item, index) => (
-            <div key={index} className="grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-2">
+            <div
+              key={index}
+              className={`grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-2 md:p-5 ${
+                fieldErrors[`experience-${index}-duplicate`]
+                  ? 'ring-1 ring-rose-400'
+                  : ''
+              }`}
+            >
               <Input
                 label="Организация"
                 value={item.companyName}
-                error={fieldErrors[`experience-${index}`]}
+                error={fieldErrors[`experience-${index}-company`]}
                 onChange={(event) => {
                   const workExperiences = [...values.workExperiences];
                   workExperiences[index] = { ...item, companyName: event.target.value };
                   setField('workExperiences', workExperiences);
                 }}
               />
-              <Input
+              <Select
                 label="Должность"
-                value={item.position}
+                value={item.positionId}
+                options={options.positions}
+                error={fieldErrors[`experience-${index}-position`]}
                 onChange={(event) => {
                   const workExperiences = [...values.workExperiences];
-                  workExperiences[index] = { ...item, position: event.target.value };
+                  workExperiences[index] = { ...item, positionId: event.target.value };
                   setField('workExperiences', workExperiences);
                 }}
               />
               <DateField
                 label="Дата начала"
                 value={item.startDate}
+                max={todayIsoDate()}
+                error={fieldErrors[`experience-${index}-start`]}
                 onChange={(value) => {
                   const workExperiences = [...values.workExperiences];
                   workExperiences[index] = { ...item, startDate: value };
                   setField('workExperiences', workExperiences);
                 }}
               />
-              <DateField
-                label="Дата окончания"
-                value={item.endDate ?? ''}
-                disabled={item.isCurrent}
-                onChange={(value) => {
-                  const workExperiences = [...values.workExperiences];
-                  workExperiences[index] = { ...item, endDate: value };
-                  setField('workExperiences', workExperiences);
-                }}
-              />
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={item.isCurrent}
+              <div className="space-y-3">
+                <DateField
+                  label="Дата окончания"
+                  value={item.endDate ?? ''}
+                  disabled={item.isCurrent}
+                  error={fieldErrors[`experience-${index}-end`]}
+                  onChange={(value) => {
+                    const workExperiences = [...values.workExperiences];
+                    workExperiences[index] = { ...item, endDate: value };
+                    setField('workExperiences', workExperiences);
+                  }}
+                />
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={item.isCurrent}
+                    onChange={(event) => {
+                      const workExperiences = [...values.workExperiences];
+                      workExperiences[index] = {
+                        ...item,
+                        isCurrent: event.target.checked,
+                        endDate: event.target.checked ? '' : item.endDate,
+                      };
+                      setField('workExperiences', workExperiences);
+                    }}
+                  />
+                  Текущее место работы
+                </label>
+              </div>
+              <div className="md:col-span-2">
+                <Input
+                  label="Обязанности"
+                  value={item.responsibilities ?? ''}
+                  error={fieldErrors[`experience-${index}-responsibilities`]}
                   onChange={(event) => {
                     const workExperiences = [...values.workExperiences];
                     workExperiences[index] = {
                       ...item,
-                      isCurrent: event.target.checked,
-                      endDate: event.target.checked ? '' : item.endDate,
+                      responsibilities: event.target.value,
                     };
                     setField('workExperiences', workExperiences);
                   }}
                 />
-                Текущее место работы
-              </label>
-              <Input
-                label="Обязанности"
-                value={item.responsibilities ?? ''}
-                onChange={(event) => {
-                  const workExperiences = [...values.workExperiences];
-                  workExperiences[index] = {
-                    ...item,
-                    responsibilities: event.target.value,
-                  };
-                  setField('workExperiences', workExperiences);
-                }}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() =>
-                  setField(
-                    'workExperiences',
-                    values.workExperiences.filter((_, itemIndex) => itemIndex !== index),
-                  )
-                }
-              >
-                Удалить
-              </Button>
+              </div>
+              {fieldErrors[`experience-${index}-duplicate`] ? (
+                <p className="text-xs text-rose-600 md:col-span-2">
+                  {fieldErrors[`experience-${index}-duplicate`]}
+                </p>
+              ) : null}
+              <div className="flex justify-end md:col-span-2">
+                <DeleteCardButton
+                  onClick={() =>
+                    setField(
+                      'workExperiences',
+                      values.workExperiences.filter((_, itemIndex) => itemIndex !== index),
+                    )
+                  }
+                />
+              </div>
             </div>
           ))}
           <Button
@@ -727,5 +974,32 @@ export function EmployeeForm({
         )}
       </div>
     </div>
+  );
+}
+
+function DeleteCardButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className="rounded-lg p-1.5 text-rose-600 transition hover:bg-rose-50"
+      aria-label="Удалить"
+      onClick={onClick}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M4 7h16" />
+        <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+        <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
+        <path d="M10 11v6M14 11v6" />
+      </svg>
+    </button>
   );
 }

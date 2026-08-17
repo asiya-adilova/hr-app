@@ -29,6 +29,10 @@ export class WorkExperiencesService extends BaseService<
     return this.prisma.workExperience;
   }
 
+  protected getByIdInclude() {
+    return { position: true };
+  }
+
   protected getDefaultOrderBy() {
     return { startDate: 'desc' as const };
   }
@@ -44,7 +48,7 @@ export class WorkExperiencesService extends BaseService<
   protected toUpdateData(dto: UpdateWorkExperienceDto) {
     return {
       ...(dto.companyName !== undefined && { companyName: dto.companyName }),
-      ...(dto.position !== undefined && { position: dto.position }),
+      ...(dto.positionId !== undefined && { positionId: dto.positionId }),
       ...(dto.startDate !== undefined && {
         startDate: new Date(dto.startDate),
       }),
@@ -104,8 +108,9 @@ export class WorkExperiencesService extends BaseService<
 
     const uniquenessError = await this.findUniquenessError(employeeId, {
       companyName: dto.companyName,
-      position: dto.position,
+      positionId: dto.positionId,
       startDate: new Date(dto.startDate),
+      endDate: dto.isCurrent || !dto.endDate ? null : new Date(dto.endDate),
     });
 
     if (uniquenessError) {
@@ -148,8 +153,13 @@ export class WorkExperiencesService extends BaseService<
       employeeId,
       {
         companyName: dto.companyName ?? existing.companyName,
-        position: dto.position ?? existing.position,
+        positionId: dto.positionId ?? existing.positionId,
         startDate: dto.startDate ? new Date(dto.startDate) : existing.startDate,
+        endDate: dto.isCurrent
+          ? null
+          : dto.endDate
+            ? new Date(dto.endDate)
+            : existing.endDate,
       },
       id,
     );
@@ -181,6 +191,13 @@ export class WorkExperiencesService extends BaseService<
     user: AuthUser,
   ): Promise<ServiceResult<WorkExperienceResponseDto[]>> {
     return this.withEmployeeAccess(employeeId, user, async () => {
+      if (hasOverlappingWorkExperiences(items)) {
+        return ServiceResult.error(
+          ErrorCode.DuplicateData,
+          DUPLICATE_WORK_EXPERIENCE_MESSAGE,
+        );
+      }
+
       await this.prisma.workExperience.updateMany({
         where: { employeeId, isDeleted: false },
         data: { isDeleted: true, deletedAt: new Date() },
@@ -220,20 +237,35 @@ export class WorkExperiencesService extends BaseService<
     employeeId: number,
     fields: {
       companyName: string;
-      position: string;
+      positionId: number;
       startDate: Date;
+      endDate: Date | null;
     },
     excludeId?: number,
   ): Promise<ServiceResult<WorkExperienceResponseDto> | null> {
-    const duplicate = await this.prisma.workExperience.findFirst({
+    const candidates = await this.prisma.workExperience.findMany({
       where: {
         employeeId,
-        companyName: fields.companyName,
-        position: fields.position,
-        startDate: fields.startDate,
+        companyName: {
+          equals: fields.companyName.trim(),
+          mode: 'insensitive',
+        },
+        positionId: fields.positionId,
         ...(excludeId ? { id: { not: excludeId } } : {}),
       },
     });
+
+    const startKey = toIsoDateKey(fields.startDate);
+    const endKey = toIsoDateKey(fields.endDate) || localTodayIsoDate();
+    const duplicate = candidates.find((item) =>
+      periodsOverlap(
+        { startDate: startKey, endDate: endKey },
+        {
+          startDate: toIsoDateKey(item.startDate),
+          endDate: toIsoDateKey(item.endDate) || localTodayIsoDate(),
+        },
+      ),
+    );
 
     if (!duplicate) {
       return null;
@@ -241,7 +273,75 @@ export class WorkExperiencesService extends BaseService<
 
     return ServiceResult.error(
       ErrorCode.DuplicateData,
-      'Запись об опыте работы с такими данными уже существует',
+      DUPLICATE_WORK_EXPERIENCE_MESSAGE,
     );
   }
+}
+
+const DUPLICATE_WORK_EXPERIENCE_MESSAGE =
+  'Нельзя указать один и тот же опыт работы несколько раз';
+
+function localTodayIsoDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function toIsoDateKey(value: string | Date | null | undefined) {
+  if (!value) {
+    return '';
+  }
+  if (typeof value === 'string') {
+    return value.slice(0, 10);
+  }
+  return value.toISOString().slice(0, 10);
+}
+
+function experienceRange(item: {
+  startDate: string | Date;
+  endDate?: string | Date | null;
+  isCurrent?: boolean;
+}) {
+  return {
+    startDate: toIsoDateKey(item.startDate),
+    endDate:
+      item.isCurrent || !item.endDate
+        ? localTodayIsoDate()
+        : toIsoDateKey(item.endDate),
+  };
+}
+
+function periodsOverlap(
+  first: { startDate: string; endDate: string },
+  second: { startDate: string; endDate: string },
+) {
+  return first.startDate <= second.endDate && second.startDate <= first.endDate;
+}
+
+function isSameWorkExperienceRole(
+  first: { companyName: string; positionId: number },
+  second: { companyName: string; positionId: number },
+) {
+  return (
+    first.companyName.trim().toLowerCase() ===
+      second.companyName.trim().toLowerCase() &&
+    first.positionId === second.positionId
+  );
+}
+
+function hasOverlappingWorkExperiences(items: CreateWorkExperienceDto[]) {
+  for (let first = 0; first < items.length; first += 1) {
+    for (let second = first + 1; second < items.length; second += 1) {
+      if (
+        isSameWorkExperienceRole(items[first], items[second]) &&
+        periodsOverlap(experienceRange(items[first]), experienceRange(items[second]))
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }

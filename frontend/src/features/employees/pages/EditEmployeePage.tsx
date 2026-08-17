@@ -39,6 +39,7 @@ export function EditEmployeePage() {
         initial={employee}
         submitting={submitting}
         error={submitError}
+        onComplete={() => navigate(routes.employeeDetails(employee.id))}
         onSaveStep={async (step, { employee: payload, educations, workExperiences }) => {
           setSubmitting(true);
           setSubmitError(null);
@@ -49,6 +50,7 @@ export function EditEmployeePage() {
             delete updatePayload.hasDriverLicense;
             delete updatePayload.driverLicenseCategoryId;
             delete updatePayload.additionalInfo;
+            delete updatePayload.educationLevelId;
 
             if (step === 0 || step === 1) {
               await employeeApi.update(employee.id, {
@@ -64,7 +66,10 @@ export function EditEmployeePage() {
 
             if (step === 3) {
               await employeeApi.replaceEducations(employee.id, educations);
-              await employeeApi.update(employee.id, { formStep: 4 });
+              await employeeApi.update(employee.id, {
+                educationLevelId: payload.educationLevelId,
+                formStep: 4,
+              });
             }
 
             if (step === 4) {
@@ -77,7 +82,6 @@ export function EditEmployeePage() {
                 additionalInfo: payload.additionalInfo,
                 formStep: 5,
               });
-              navigate(routes.employeeDetails(employee.id));
             }
           } catch (caught) {
             setSubmitError(

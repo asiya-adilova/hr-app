@@ -10,9 +10,16 @@ export class WorkExperienceResponseDto {
   companyName!: string;
 
   @ApiProperty({
-    example: 'Software Engineer',
+    example: 2,
+    description: 'Идентификатор должности из справочника Position',
   })
-  position!: string;
+  positionId!: number;
+
+  @ApiProperty({
+    example: 'Software Engineer',
+    description: 'Название должности',
+  })
+  positionName!: string;
 
   @ApiProperty({
     example: '2019-06-01',

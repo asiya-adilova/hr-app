@@ -15,7 +15,11 @@ function normalizeName(value: string): string {
 }
 
 export function sumExperienceMonths(
-  items: Array<{ startDate: Date; endDate: Date | null; position: string }>,
+  items: Array<{
+    startDate: Date;
+    endDate: Date | null;
+    position?: { name: string } | null;
+  }>,
   specialtyNames: Array<string | null | undefined>,
 ) {
   const specialties = new Set(
@@ -30,7 +34,7 @@ export function sumExperienceMonths(
   for (const item of items) {
     const months = monthsBetween(item.startDate, item.endDate ?? now);
     totalExperienceMonths += months;
-    if (specialties.has(normalizeName(item.position))) {
+    if (item.position && specialties.has(normalizeName(item.position.name))) {
       specialtyExperienceMonths += months;
     }
   }
@@ -47,7 +51,10 @@ export async function syncEmployeeExperience(
     include: {
       position: true,
       educations: { where: { isDeleted: false } },
-      workExperiences: { where: { isDeleted: false } },
+      workExperiences: {
+        where: { isDeleted: false },
+        include: { position: true },
+      },
     },
   });
 

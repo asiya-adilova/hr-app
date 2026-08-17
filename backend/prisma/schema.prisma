@@ -40,7 +40,8 @@ model Position {
   id   Int    @id @default(autoincrement())
   name String @unique
 
-  employees Employee[]
+  employees       Employee[]
+  workExperiences WorkExperience[]
 }
 
 model EmploymentType {
@@ -206,9 +207,9 @@ model WorkExperience {
   id Int @id @default(autoincrement())
 
   employeeId Int
+  positionId Int
 
   companyName      String
-  position         String
   startDate        DateTime
   endDate          DateTime?
   responsibilities String?
@@ -219,4 +220,5 @@ model WorkExperience {
   isDeleted Boolean  @default(false)
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  position Position @relation(fields: [positionId], references: [id])
 }

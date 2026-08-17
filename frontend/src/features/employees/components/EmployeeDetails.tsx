@@ -80,6 +80,9 @@ export function EmployeeDetails({ employee }: { employee: EmployeeDetails }) {
 
       <section className="rounded-3xl border border-line bg-white p-4 md:p-6">
         <h2 className="mb-4 text-lg font-semibold">Образование</h2>
+        <div className="mb-4">
+          <Row label="Уровень образования" value={employee.educationLevel?.name} />
+        </div>
         {employee.education.length ? (
           <ul className="space-y-3">
             {employee.education.map((item) => (
@@ -104,7 +107,7 @@ export function EmployeeDetails({ employee }: { employee: EmployeeDetails }) {
             {employee.workExperience.map((item) => (
               <li key={item.id ?? item.companyName} className="rounded-2xl bg-slate-50 p-4">
                 <p className="font-medium">
-                  {item.position} · {item.companyName}
+                  {item.positionName} · {item.companyName}
                 </p>
                 <p className="text-sm text-ink-500">
                   {formatDate(item.startDate)} — {item.isCurrent ? 'н.в.' : formatDate(item.endDate)}

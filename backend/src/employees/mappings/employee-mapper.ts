@@ -57,10 +57,11 @@ type EducationRecord = {
 type WorkExperienceRecord = {
   id: number;
   companyName: string;
-  position: string;
+  positionId: number;
   startDate: Date;
   endDate: Date | null;
   responsibilities: string | null;
+  position?: NamedReference | null;
 };
 
 type RelativeRecord = {
@@ -138,7 +139,8 @@ export class EmployeeMapper {
     return {
       id: experience.id,
       companyName: experience.companyName,
-      position: experience.position,
+      positionId: experience.positionId,
+      positionName: experience.position?.name ?? '',
       startDate: experience.startDate,
       endDate: experience.endDate ?? undefined,
       isCurrent: experience.endDate == null,
@@ -254,7 +256,7 @@ export class EmployeeMapper {
 
   static toWorkExperienceCreateData(dto: {
     companyName: string;
-    position: string;
+    positionId: number;
     startDate: string | Date;
     endDate?: string | Date | null;
     isCurrent?: boolean;
@@ -262,7 +264,7 @@ export class EmployeeMapper {
   }) {
     return {
       companyName: dto.companyName,
-      position: dto.position,
+      positionId: dto.positionId,
       startDate: new Date(dto.startDate),
       endDate: dto.isCurrent
         ? null

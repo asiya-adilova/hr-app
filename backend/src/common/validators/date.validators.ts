@@ -40,3 +40,20 @@ export function IsDateOnOrAfterToday(validationOptions?: ValidationOptions) {
     });
   };
 }
+
+export function IsDateOnOrBeforeToday(validationOptions?: ValidationOptions) {
+  return (object: object, propertyName: string) => {
+    registerDecorator({
+      name: 'isDateOnOrBeforeToday',
+      target: object.constructor,
+      propertyName,
+      options: validationOptions,
+      validator: {
+        validate(value: unknown) {
+          const today = new Date().toISOString().slice(0, 10);
+          return isIsoDate(value) && value.slice(0, 10) <= today;
+        },
+      },
+    });
+  };
+}

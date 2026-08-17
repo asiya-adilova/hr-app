@@ -1,12 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
+import { IsDateOnOrBeforeToday } from '../../../common/validators/date.validators';
 
 export class CreateWorkExperienceDto {
   @ApiProperty({
@@ -20,14 +24,12 @@ export class CreateWorkExperienceDto {
   companyName!: string;
 
   @ApiProperty({
-    example: 'Software Engineer',
-    description: 'Должность',
-    maxLength: 255,
+    example: 2,
+    description: 'Идентификатор должности из справочника Position',
   })
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(255)
-  position!: string;
+  @Type(() => Number)
+  @IsInt()
+  positionId!: number;
 
   @ApiProperty({
     example: '2019-06-01',
@@ -36,15 +38,19 @@ export class CreateWorkExperienceDto {
     format: 'date',
   })
   @IsDateString()
+  @IsDateOnOrBeforeToday({
+    message: 'Дата начала не может быть в будущем',
+  })
   startDate!: string;
 
   @ApiPropertyOptional({
     example: '2022-03-15',
-    description: 'Дата окончания работы',
+    description: 'Дата окончания работы. Не нужна, если это текущее место работы.',
     type: String,
     format: 'date',
   })
-  @IsOptional()
+  @ValidateIf((dto: CreateWorkExperienceDto) => !dto.isCurrent)
+  @IsNotEmpty({ message: 'Укажите дату окончания или отметьте текущее место работы' })
   @IsDateString()
   endDate?: string;
 
@@ -56,13 +62,13 @@ export class CreateWorkExperienceDto {
   @IsBoolean()
   isCurrent?: boolean;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: 'Разработка корпоративных информационных систем',
     description: 'Обязанности',
     maxLength: 2000,
   })
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
   @MaxLength(2000)
-  responsibilities?: string;
+  responsibilities!: string;
 }

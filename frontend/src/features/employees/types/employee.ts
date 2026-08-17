@@ -13,7 +13,8 @@ export type EducationItem = {
 export type WorkExperienceItem = {
   id?: number;
   companyName: string;
-  position: string;
+  positionId: number;
+  positionName?: string;
   startDate: string;
   endDate?: string;
   isCurrent: boolean;
