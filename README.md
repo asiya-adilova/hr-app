@@ -93,43 +93,43 @@ frontend/src/
 
 Login:
 
-<img src="./docs/screenshots/login.png" alt="Login" />
+![Login](docs/screenshots/login.png)
 
 Registration:
 
-<img src="./docs/screenshots/register.png" alt="Registration" />
+![Registration](docs/screenshots/register.png)
 
 Employee cabinet, step 1 (personal and passport data):
 
-<img src="./docs/screenshots/employee-form-contacts.png" alt="Employee form contacts" />
+![Employee form contacts](docs/screenshots/employee-form-contacts.png)
 
 Employee cabinet, step 3 (work experience):
 
-<img src="./docs/screenshots/employee-form-experience.png" alt="Employee form work experience" />
+![Employee form work experience](docs/screenshots/employee-form-experience.png)
 
 Employee cabinet, profile view:
 
-<img src="./docs/screenshots/employee-profile.png" alt="Employee profile" />
+![Employee profile](docs/screenshots/employee-profile.png)
 
 Employee cabinet, profile view (work, education, relatives):
 
-<img src="./docs/screenshots/employee-profile-more.png" alt="Employee profile more" />
+![Employee profile more](docs/screenshots/employee-profile-more.png)
 
 Admin panel, home:
 
-<img src="./docs/screenshots/admin-home.png" alt="Admin home" />
+![Admin home](docs/screenshots/admin-home.png)
 
 Admin panel, employees table with filters:
 
-<img src="./docs/screenshots/admin-employees.png" alt="Admin employees" />
+![Admin employees](docs/screenshots/admin-employees.png)
 
 Admin panel, reference tables:
 
-<img src="./docs/screenshots/admin-references.png" alt="Admin references" />
+![Admin references](docs/screenshots/admin-references.png)
 
 Admin panel, cities reference table:
 
-<img src="./docs/screenshots/admin-references-cities.png" alt="Admin cities" />
+![Admin cities](docs/screenshots/admin-references-cities.png)
 
 ## How to run
 
