@@ -192,15 +192,6 @@ export class CreateEmployeeDto {
   @IsInt()
   employmentTypeId?: number;
 
-  @ApiPropertyOptional({
-    example: 3,
-    description:
-      'Идентификатор уровня образования из справочника EducationLevel',
-  })
-  @IsOptional()
-  @IsInt()
-  educationLevelId?: number;
-
   @ApiProperty({
     example: 1,
     description:

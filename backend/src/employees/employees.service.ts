@@ -99,7 +99,6 @@ export class EmployeesService extends BaseService<
       departmentId: dto.departmentId,
       positionId: dto.positionId,
       employmentTypeId: dto.employmentTypeId,
-      educationLevelId: dto.educationLevelId,
       maritalStatusId: dto.maritalStatusId,
       driverLicenseCategoryId:
         dto.hasDriverLicense === false ? null : dto.driverLicenseCategoryId,
@@ -133,7 +132,6 @@ export class EmployeesService extends BaseService<
       departmentId: dto.departmentId,
       positionId: dto.positionId,
       employmentTypeId: dto.employmentTypeId,
-      educationLevelId: dto.educationLevelId,
       maritalStatusId: dto.maritalStatusId,
       driverLicenseCategoryId:
         dto.hasDriverLicense === false ? null : dto.driverLicenseCategoryId,
@@ -499,8 +497,13 @@ export class EmployeesService extends BaseService<
     }
 
     if (filter.educationLevelIds?.length) {
-      where.educationLevelId = {
-        in: filter.educationLevelIds,
+      where.educations = {
+        some: {
+          isDeleted: false,
+          educationLevelId: {
+            in: filter.educationLevelIds,
+          },
+        },
       };
     }
 

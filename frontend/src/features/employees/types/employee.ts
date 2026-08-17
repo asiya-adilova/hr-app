@@ -7,6 +7,8 @@ export type EducationItem = {
   id?: number;
   institutionName: string;
   specialty: string;
+  educationLevelId: number;
+  educationLevelName?: string;
   graduationYear: number;
 };
 
@@ -49,7 +51,6 @@ export type EmployeeDetails = {
   department?: EmployeeReference;
   position?: EmployeeReference;
   employmentType?: EmployeeReference;
-  educationLevel?: EmployeeReference;
   maritalStatus: EmployeeReference;
   experience: {
     totalMonths: number;
@@ -84,7 +85,6 @@ export type CreateEmployeePayload = {
   departmentId?: number;
   positionId?: number;
   employmentTypeId?: number;
-  educationLevelId?: number;
   maritalStatusId: number;
   driverLicenseCategoryId?: number;
   militaryService?: boolean;

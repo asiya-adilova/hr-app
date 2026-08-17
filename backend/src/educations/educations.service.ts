@@ -29,6 +29,10 @@ export class EducationsService extends BaseService<
     return this.prisma.education;
   }
 
+  protected getByIdInclude() {
+    return { educationLevel: true };
+  }
+
   protected getDefaultOrderBy() {
     return { graduationYear: 'desc' as const };
   }
@@ -47,6 +51,9 @@ export class EducationsService extends BaseService<
         institution: dto.institutionName,
       }),
       ...(dto.specialty !== undefined && { specialty: dto.specialty }),
+      ...(dto.educationLevelId !== undefined && {
+        educationLevelId: dto.educationLevelId,
+      }),
       ...(dto.graduationYear !== undefined && {
         graduationYear: dto.graduationYear,
       }),
@@ -93,6 +100,7 @@ export class EducationsService extends BaseService<
     const uniquenessError = await this.findUniquenessError(employeeId, {
       institution: dto.institutionName,
       specialty: dto.specialty,
+      educationLevelId: dto.educationLevelId,
       graduationYear: dto.graduationYear,
     });
 
@@ -136,6 +144,7 @@ export class EducationsService extends BaseService<
       {
         institution: dto.institutionName ?? existing.institution,
         specialty: dto.specialty ?? existing.specialty,
+        educationLevelId: dto.educationLevelId ?? existing.educationLevelId,
         graduationYear: dto.graduationYear ?? existing.graduationYear,
       },
       id,
@@ -208,6 +217,7 @@ export class EducationsService extends BaseService<
     fields: {
       institution: string;
       specialty: string;
+      educationLevelId: number;
       graduationYear: number;
     },
     excludeId?: number,
@@ -217,6 +227,7 @@ export class EducationsService extends BaseService<
         employeeId,
         institution: fields.institution,
         specialty: fields.specialty,
+        educationLevelId: fields.educationLevelId,
         graduationYear: fields.graduationYear,
         ...(excludeId ? { id: { not: excludeId } } : {}),
       },

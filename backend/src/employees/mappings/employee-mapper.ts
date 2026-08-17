@@ -51,7 +51,9 @@ type EducationRecord = {
   id: number;
   institution: string;
   specialty: string;
+  educationLevelId: number;
   graduationYear: number;
+  educationLevel?: NamedReference | null;
 };
 
 type WorkExperienceRecord = {
@@ -81,7 +83,6 @@ export const employeeLookupInclude = {
   department: true,
   position: true,
   employmentType: true,
-  educationLevel: true,
   maritalStatus: true,
   driverLicenseCategory: true,
 } as const;
@@ -90,7 +91,11 @@ export const employeeTableInclude = {
   account: true,
   department: true,
   position: true,
-  educationLevel: true,
+  educations: {
+    where: { isDeleted: false },
+    include: { educationLevel: true },
+    orderBy: { graduationYear: 'desc' as const },
+  },
 } as const;
 
 export type EmployeeWithLookups = EmployeeRecord & {
@@ -100,7 +105,6 @@ export type EmployeeWithLookups = EmployeeRecord & {
   department: NamedReference | null;
   position: NamedReference | null;
   employmentType: NamedReference | null;
-  educationLevel: NamedReference | null;
   maritalStatus: NamedReference;
   driverLicenseCategory: NamedReference | null;
 };
@@ -108,7 +112,10 @@ export type EmployeeWithLookups = EmployeeRecord & {
 export type EmployeeWithTableReferences = EmployeeRecord & {
   department: NamedReference | null;
   position: NamedReference | null;
-  educationLevel: NamedReference | null;
+  educations: Array<{
+    graduationYear: number;
+    educationLevel: NamedReference | null;
+  }>;
 };
 
 export class EmployeeMapper {
@@ -129,6 +136,8 @@ export class EmployeeMapper {
       id: education.id,
       institutionName: education.institution,
       specialty: education.specialty,
+      educationLevelId: education.educationLevelId,
+      educationLevelName: education.educationLevel?.name ?? '',
       graduationYear: education.graduationYear,
     };
   }
@@ -172,7 +181,7 @@ export class EmployeeMapper {
       fullName: EmployeeMapper.toFullName(employee.account),
       departmentName: employee.department?.name ?? '—',
       positionName: employee.position?.name ?? '—',
-      educationLevelName: employee.educationLevel?.name ?? '—',
+      educationLevelName: employee.educations[0]?.educationLevel?.name ?? '—',
       hireDate: employee.hireDate ?? undefined,
       totalExperienceMonths: employee.totalExperienceMonths,
       specialtyExperienceMonths:
@@ -222,9 +231,6 @@ export class EmployeeMapper {
       employmentType: employee.employmentType
         ? EmployeeMapper.toReferenceResponse(employee.employmentType)
         : undefined,
-      educationLevel: employee.educationLevel
-        ? EmployeeMapper.toReferenceResponse(employee.educationLevel)
-        : undefined,
       maritalStatus: EmployeeMapper.toReferenceResponse(employee.maritalStatus),
 
       experience: EmployeeMapper.toExperienceResponse(employee),
@@ -245,11 +251,13 @@ export class EmployeeMapper {
   static toEducationCreateData(dto: {
     institutionName: string;
     specialty?: string;
+    educationLevelId: number;
     graduationYear?: number;
   }) {
     return {
       institution: dto.institutionName,
       specialty: dto.specialty ?? '',
+      educationLevelId: dto.educationLevelId,
       graduationYear: dto.graduationYear ?? 0,
     };
   }
@@ -316,7 +324,6 @@ export class EmployeeMapper {
       departmentId: dto.department?.id,
       positionId: dto.position?.id,
       employmentTypeId: dto.employmentType?.id,
-      educationLevelId: dto.educationLevel?.id,
       maritalStatusId: dto.maritalStatus.id,
       driverLicenseCategoryId: dto.driverLicense.categoryId,
       educations: {

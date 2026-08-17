@@ -55,14 +55,20 @@ type FormValues = {
   departmentId: string;
   positionId: string;
   employmentTypeId: string;
-  educationLevelId: string;
   maritalStatusId: string;
   driverLicenseCategoryId: string;
   militaryService: string;
   hasDriverLicense: string;
   additionalInfo: string;
-  educations: Array<Omit<EducationItem, 'id'>>;
+  educations: EducationFormItem[];
   workExperiences: WorkExperienceFormItem[];
+};
+
+type EducationFormItem = {
+  institutionName: string;
+  specialty: string;
+  educationLevelId: string;
+  graduationYear: number;
 };
 
 type WorkExperienceFormItem = {
@@ -88,8 +94,13 @@ type EmployeeFormProps = {
   onComplete?: () => void;
 };
 
-function emptyEducation() {
-  return { institutionName: '', specialty: '', graduationYear: new Date().getFullYear() };
+function emptyEducation(): EducationFormItem {
+  return {
+    institutionName: '',
+    specialty: '',
+    educationLevelId: '',
+    graduationYear: new Date().getFullYear(),
+  };
 }
 
 function emptyExperience(): WorkExperienceFormItem {
@@ -149,9 +160,6 @@ function fromInitial(
     employmentTypeId: initial?.employmentType
       ? String(initial.employmentType.id)
       : '',
-    educationLevelId: initial?.educationLevel
-      ? String(initial.educationLevel.id)
-      : '',
     maritalStatusId: initial ? String(initial.maritalStatus.id) : '',
     driverLicenseCategoryId: initial?.driverLicense.categoryId
       ? String(initial.driverLicense.categoryId)
@@ -163,6 +171,7 @@ function fromInitial(
       ? initial.education.map((item) => ({
           institutionName: item.institutionName,
           specialty: item.specialty,
+          educationLevelId: item.educationLevelId ? String(item.educationLevelId) : '',
           graduationYear: item.graduationYear,
         }))
       : [],
@@ -230,8 +239,12 @@ function snapshotForStep(step: number, values: FormValues) {
 
   if (step === 3) {
     return {
-      educationLevelId: values.educationLevelId,
-      educations: values.educations,
+      educations: values.educations.map((item) => ({
+        institutionName: item.institutionName,
+        specialty: item.specialty,
+        educationLevelId: item.educationLevelId,
+        graduationYear: item.graduationYear,
+      })),
     };
   }
 
@@ -432,10 +445,18 @@ export function EmployeeForm({
     }
 
     if (current === 3) {
-      if (!required(values.educationLevelId)) nextErrors.educationLevelId = 'Обязательно';
       values.educations.forEach((item, index) => {
-        if (!item.institutionName.trim() || !item.specialty.trim()) {
-          nextErrors[`education-${index}`] = 'Заполните учебное заведение и специальность';
+        if (!item.institutionName.trim()) {
+          nextErrors[`education-${index}-institution`] = 'Обязательно';
+        }
+        if (!item.specialty.trim()) {
+          nextErrors[`education-${index}-specialty`] = 'Обязательно';
+        }
+        if (!item.educationLevelId) {
+          nextErrors[`education-${index}-level`] = 'Обязательно';
+        }
+        if (!item.graduationYear) {
+          nextErrors[`education-${index}-year`] = 'Обязательно';
         }
       });
     }
@@ -482,9 +503,6 @@ export function EmployeeForm({
       employmentTypeId: values.employmentTypeId
         ? Number(values.employmentTypeId)
         : undefined,
-      educationLevelId: values.educationLevelId
-        ? Number(values.educationLevelId)
-        : undefined,
       maritalStatusId: Number(values.maritalStatusId),
       driverLicenseCategoryId: values.hasDriverLicense === 'true'
         ? Number(values.driverLicenseCategoryId) || undefined
@@ -496,7 +514,12 @@ export function EmployeeForm({
 
     return {
       employee,
-      educations: values.educations,
+      educations: values.educations.map((item) => ({
+        institutionName: item.institutionName,
+        specialty: item.specialty,
+        educationLevelId: Number(item.educationLevelId),
+        graduationYear: Number(item.graduationYear),
+      })),
       workExperiences: values.workExperiences.map((item) => ({
         companyName: item.companyName,
         positionId: Number(item.positionId),
@@ -720,19 +743,12 @@ export function EmployeeForm({
 
       {step === 3 ? (
         <section className="space-y-4 rounded-3xl border border-line bg-white p-4 md:p-6">
-          <Select
-            label="Уровень образования"
-            value={values.educationLevelId}
-            options={options.educationLevels}
-            error={fieldErrors.educationLevelId}
-            onChange={(event) => setField('educationLevelId', event.target.value)}
-          />
           {values.educations.map((item, index) => (
-            <div key={index} className="grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-3">
+            <div key={index} className="grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-2">
               <Input
                 label="Учебное заведение"
                 value={item.institutionName}
-                error={fieldErrors[`education-${index}`]}
+                error={fieldErrors[`education-${index}-institution`]}
                 onChange={(event) => {
                   const educations = [...values.educations];
                   educations[index] = { ...item, institutionName: event.target.value };
@@ -742,9 +758,21 @@ export function EmployeeForm({
               <Input
                 label="Специальность"
                 value={item.specialty}
+                error={fieldErrors[`education-${index}-specialty`]}
                 onChange={(event) => {
                   const educations = [...values.educations];
                   educations[index] = { ...item, specialty: event.target.value };
+                  setField('educations', educations);
+                }}
+              />
+              <Select
+                label="Уровень образования"
+                value={item.educationLevelId}
+                options={options.educationLevels}
+                error={fieldErrors[`education-${index}-level`]}
+                onChange={(event) => {
+                  const educations = [...values.educations];
+                  educations[index] = { ...item, educationLevelId: event.target.value };
                   setField('educations', educations);
                 }}
               />
@@ -752,6 +780,7 @@ export function EmployeeForm({
                 label="Год окончания"
                 type="number"
                 value={item.graduationYear}
+                error={fieldErrors[`education-${index}-year`]}
                 onChange={(event) => {
                   const educations = [...values.educations];
                   educations[index] = {
@@ -761,7 +790,7 @@ export function EmployeeForm({
                   setField('educations', educations);
                 }}
               />
-              <div className="flex justify-end md:col-span-3">
+              <div className="flex justify-end md:col-span-2">
                 <DeleteCardButton
                   onClick={() =>
                     setField(

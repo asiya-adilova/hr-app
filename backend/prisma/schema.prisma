@@ -55,7 +55,7 @@ model EducationLevel {
   id   Int    @id @default(autoincrement())
   name String @unique
 
-  employees Employee[]
+  educations Education[]
 }
 
 model MaritalStatus {
@@ -148,7 +148,6 @@ model Employee {
   departmentId              Int?
   positionId                 Int?
   employmentTypeId          Int?
-  educationLevelId          Int?
   maritalStatusId           Int
   driverLicenseCategoryId   Int?
 
@@ -159,7 +158,6 @@ model Employee {
   department Department? @relation(fields: [departmentId], references: [id])
   position Position? @relation(fields: [positionId], references: [id])
   employmentType EmploymentType? @relation(fields: [employmentTypeId], references: [id])
-  educationLevel EducationLevel? @relation(fields: [educationLevelId], references: [id])
   maritalStatus MaritalStatus @relation(fields: [maritalStatusId], references: [id])
   driverLicenseCategory DriverLicenseCategory? @relation(fields: [driverLicenseCategoryId], references: [id])
 
@@ -171,7 +169,9 @@ model Employee {
 model Education {
   id Int @id @default(autoincrement())
 
-  employeeId     Int
+  employeeId       Int
+  educationLevelId Int
+
   institution    String
   specialty      String
   graduationYear Int
@@ -182,6 +182,7 @@ model Education {
   isDeleted Boolean  @default(false)
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  educationLevel EducationLevel @relation(fields: [educationLevelId], references: [id])
 }
 
 model Relative {

@@ -50,7 +50,6 @@ export function EditEmployeePage() {
             delete updatePayload.hasDriverLicense;
             delete updatePayload.driverLicenseCategoryId;
             delete updatePayload.additionalInfo;
-            delete updatePayload.educationLevelId;
 
             if (step === 0 || step === 1) {
               await employeeApi.update(employee.id, {
@@ -67,7 +66,6 @@ export function EditEmployeePage() {
             if (step === 3) {
               await employeeApi.replaceEducations(employee.id, educations);
               await employeeApi.update(employee.id, {
-                educationLevelId: payload.educationLevelId,
                 formStep: 4,
               });
             }

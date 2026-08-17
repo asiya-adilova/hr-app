@@ -80,17 +80,15 @@ export function EmployeeDetails({ employee }: { employee: EmployeeDetails }) {
 
       <section className="rounded-3xl border border-line bg-white p-4 md:p-6">
         <h2 className="mb-4 text-lg font-semibold">Образование</h2>
-        <div className="mb-4">
-          <Row label="Уровень образования" value={employee.educationLevel?.name} />
-        </div>
         {employee.education.length ? (
           <ul className="space-y-3">
             {employee.education.map((item) => (
               <li key={item.id ?? item.institutionName} className="rounded-2xl bg-slate-50 p-4">
                 <p className="font-medium">{item.institutionName}</p>
                 <p className="text-sm text-ink-500">
-                  {item.specialty}
-                  {item.graduationYear ? ` · ${item.graduationYear}` : ''}
+                  {[item.educationLevelName, item.specialty, item.graduationYear]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </p>
               </li>
             ))}
@@ -112,6 +110,9 @@ export function EmployeeDetails({ employee }: { employee: EmployeeDetails }) {
                 <p className="text-sm text-ink-500">
                   {formatDate(item.startDate)} — {item.isCurrent ? 'н.в.' : formatDate(item.endDate)}
                 </p>
+                {item.responsibilities ? (
+                  <p className="mt-2 text-sm text-ink-700">{item.responsibilities}</p>
+                ) : null}
               </li>
             ))}
           </ul>

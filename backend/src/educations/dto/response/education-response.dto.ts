@@ -12,15 +12,18 @@ export class EducationResponseDto {
   @ApiPropertyOptional({ example: 'Информационные технологии' })
   specialty?: string;
 
-  @ApiPropertyOptional({ example: 'Программная инженерия' })
-  qualification?: string;
+  @ApiProperty({
+    example: 3,
+    description: 'Идентификатор уровня образования из справочника EducationLevel',
+  })
+  educationLevelId!: number;
 
-  @ApiPropertyOptional({ example: 2018 })
-  startYear?: number;
+  @ApiProperty({
+    example: 'Высшее',
+    description: 'Название уровня образования',
+  })
+  educationLevelName!: string;
 
   @ApiPropertyOptional({ example: 2022 })
   graduationYear?: number;
-
-  @ApiPropertyOptional({ example: 'Диплом с отличием' })
-  additionalInfo?: string;
 }

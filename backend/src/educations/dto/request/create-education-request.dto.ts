@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsInt,
   IsNotEmpty,
@@ -30,9 +31,18 @@ export class CreateEducationDto {
   specialty!: string;
 
   @ApiProperty({
+    example: 3,
+    description: 'Идентификатор уровня образования из справочника EducationLevel',
+  })
+  @Type(() => Number)
+  @IsInt()
+  educationLevelId!: number;
+
+  @ApiProperty({
     example: 2022,
     description: 'Год окончания',
   })
+  @Type(() => Number)
   @IsInt()
   @Min(1900)
   @Max(2100)

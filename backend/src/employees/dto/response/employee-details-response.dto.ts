@@ -194,11 +194,6 @@ export class EmployeeDetailsResponseDto {
   })
   employmentType?: EmployeeReferenceResponseDto;
 
-  @ApiPropertyOptional({
-    type: EmployeeReferenceResponseDto,
-  })
-  educationLevel?: EmployeeReferenceResponseDto;
-
   @ApiProperty({
     type: EmployeeReferenceResponseDto,
   })
