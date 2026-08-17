@@ -1,93 +1,147 @@
-# HR Employee Management
+# HR Employee Management App
 
-HR web app for employee registration and personnel management: React + Vite frontend, NestJS API, PostgreSQL.
+## About the project
+
+This is an employee management HR app.
+
+Employees can register, log in, and fill in their own profile:
+
+- personal details
+- current position in the organization
+- work history
+- education
+- extra information (driver license, military status, marital status)
+- relatives
+
+There is also an admin panel. The admin can see all employees, search them, and filter the list. The admin can also open the reference tables used in the forms (cities, departments, positions, and similar lists).
+
+## Roles
+
+There are two roles: **employee** and **admin**.
+
+Login uses email and password. The app checks the user with a JWT token.
+
+### Employee
+
+- can register and log in
+- can create and update only their own profile
+- cannot see or change other employees
+- can use reference lists in the forms (dropdowns), but cannot open the full admin tables
+
+### Admin
+
+- can log in to the admin panel
+- can see all employees
+- can search and filter employees
+- can read, update, and delete any employee
+- can open all reference tables used in the app
+
+## Tech
+
+- Frontend: React (Vite)
+- Backend: NestJS
+- Database: PostgreSQL
+- Auth: JWT (email + password)
 
 ## Project structure
 
 ```
 hr-app/
-├── compose.yml              # Local PostgreSQL (port 5433)
-├── backend/                 # NestJS API
-│   ├── prisma/
-│   │   ├── schema.prisma
-│   │   ├── migrations/
-│   │   ├── seed.ts              # Orchestrator: runs all seed modules
-│   │   ├── seed-references.ts   # Lookup tables
-│   │   ├── seed-admin.ts        # Admin account
-│   │   └── seed-employees.ts    # Demo employees
-│   └── src/
-│       ├── security/        # Auth: login, register, JWT, roles
-│       ├── employees/       # Employee CRUD, filters, table/details
-│       ├── educations/
-│       ├── work-experiences/
-│       ├── relatives/
-│       ├── references/      # Genders, cities, departments, etc.
-│       ├── prisma/          # Prisma client wrapper
-│       └── common/          # Shared DTOs, filters, helpers
-└── frontend/                # React + Vite + Tailwind
-    └── src/
-        ├── app/             # Router, auth guards, providers
-        ├── features/
-        │   ├── auth/        # Login / register
-        │   ├── admin/       # Admin dashboard
-        │   ├── employees/   # List, details, create/edit wizard
-        │   └── references/  # Reference catalog screens
-        ├── components/      # Layout + UI kit
-        └── services/        # API client
+├── compose.yml          starts local PostgreSQL
+├── docs/screenshots/    images for this README
+├── backend/             API
+└── frontend/            web app
 ```
 
-### Backend
+### Backend (`backend/`)
 
-NestJS modules:
+```
+backend/
+├── prisma/
+│   ├── schema.prisma          database models
+│   ├── migrations/            database changes
+│   ├── seed.ts                runs all seed files
+│   ├── seed-references.ts     cities, departments, positions, and other lists
+│   ├── seed-admin.ts          admin account
+│   └── seed-employees.ts      demo employees
+└── src/
+    ├── security/              login, register, JWT, roles
+    ├── employees/             employee data
+    ├── educations/            education records
+    ├── work-experiences/      work history
+    ├── relatives/             relatives
+    ├── references/            reference tables
+    ├── prisma/                database connection
+    └── common/                shared helpers
+```
 
-| Module | Role |
-| --- | --- |
-| `SecurityModule` | Register, login, refresh tokens, `/security/me` |
-| `EmployeesModule` | Employee CRUD, paging, filters (admin) |
-| `EducationsModule` | Education records on an employee |
-| `WorkExperiencesModule` | Work history |
-| `RelativesModule` | Family members |
-| `ReferencesModule` | Lookup dictionaries used by forms |
+### Frontend (`frontend/`)
 
-Roles: `ADMIN` (full personnel + references) and `EMPLOYEE` (own profile / registration wizard).
+```
+frontend/src/
+├── app/                       routes and access checks
+├── features/
+│   ├── auth/                  login and register pages
+│   ├── admin/                 admin home
+│   ├── employees/             employee list, profile, and form
+│   └── references/            reference table pages
+├── components/                layout and UI
+└── services/                  API calls
+```
 
-API docs: [http://localhost:3000/api](http://localhost:3000/api) after the backend is running.
+## Screenshots
 
-### Frontend
+Login:
 
-- Guest: `/login`, `/register`
-- Admin: `/admin`, `/admin/employees`, `/admin/references`
-- Employee: `/employees/new` (wizard) or `/employees/:id` (profile)
+<img src="./docs/screenshots/login.png" alt="Login" />
 
-## Seed data
+Registration:
 
-`npx prisma db seed` (or `npm run prisma:seed`) runs `backend/prisma/seed.ts`, which calls:
+<img src="./docs/screenshots/register.png" alt="Registration" />
 
-1. `seed-references.ts` — genders, citizenships, nationalities, departments, positions, employment types, education levels, marital statuses, driver license categories, countries, cities
-2. `seed-admin.ts` — admin account
-3. `seed-employees.ts` — 50 demo employees with accounts, education, experience, and relatives
+Employee cabinet, step 1 (personal and passport data):
 
-Seeds are idempotent (`skipDuplicates` / `upsert`). Re-running them will not duplicate rows.
+<img src="./docs/screenshots/employee-form-contacts.png" alt="Employee form contacts" />
 
-## Setup on another computer
+Employee cabinet, step 3 (work experience):
 
-### Prerequisites
+<img src="./docs/screenshots/employee-form-experience.png" alt="Employee form work experience" />
 
-- Node.js 22+ (or current LTS)
-- npm
-- Docker Desktop (for PostgreSQL)
+Employee cabinet, profile view:
 
-### 1. Clone and start the database
+<img src="./docs/screenshots/employee-profile.png" alt="Employee profile" />
+
+Employee cabinet, profile view (work, education, relatives):
+
+<img src="./docs/screenshots/employee-profile-more.png" alt="Employee profile more" />
+
+Admin panel, home:
+
+<img src="./docs/screenshots/admin-home.png" alt="Admin home" />
+
+Admin panel, employees table with filters:
+
+<img src="./docs/screenshots/admin-employees.png" alt="Admin employees" />
+
+Admin panel, reference tables:
+
+<img src="./docs/screenshots/admin-references.png" alt="Admin references" />
+
+Admin panel, cities reference table:
+
+<img src="./docs/screenshots/admin-references-cities.png" alt="Admin cities" />
+
+## How to run
+
+You need Node.js, npm, and Docker.
+
+### 1. Start the database
 
 ```bash
-git clone <repo-url> hr-app
-cd hr-app
 docker compose up -d
 ```
 
-Postgres listens on **localhost:5433**, database `employee_hr`, user/password `postgres` / `postgres`.
-
-### 2. Backend
+### 2. Start the backend
 
 ```bash
 cd backend
@@ -97,13 +151,12 @@ npm run db:setup
 npm run start:dev
 ```
 
-`db:setup` generates the Prisma client, applies migrations, and seeds reference + admin + employee data.
+API: http://localhost:3000  
+API docs: http://localhost:3000/api
 
-API: [http://localhost:3000](http://localhost:3000)
+`npm run db:setup` creates the database tables and loads demo data (reference lists, admin, employees).
 
-### 3. Frontend
-
-In a second terminal:
+### 3. Start the frontend
 
 ```bash
 cd frontend
@@ -112,31 +165,18 @@ npm install
 npm run dev
 ```
 
-App: [http://localhost:5173](http://localhost:5173)
+App: http://localhost:5173
 
-## Demo logins
+## Demo accounts
 
-| Role | Email | Password |
-| --- | --- | --- |
-| Admin | `admin@hr.local` | `Admin123!` |
-| Employee (example) | `seed.employee01@hr.local` | `Employee123!` |
+Admin:
 
-Employee emails are `seed.employee01@hr.local` … `seed.employee50@hr.local`. Override passwords with `ADMIN_PASSWORD` and `EMPLOYEE_SEED_PASSWORD` in `backend/.env` before seeding.
+- email: `admin@hr.local`
+- password: `Admin123!`
 
-## Useful commands
+Employee (example):
 
-```bash
-# Database only
-docker compose up -d
-docker compose down
+- email: `seed.employee01@hr.local`
+- password: `Employee123!`
 
-# Backend
-cd backend
-npm run start:dev
-npm run db:setup          # generate + migrate + seed
-npm run prisma:seed       # seed only
-
-# Frontend
-cd frontend
-npm run dev
-```
+There are 50 demo employees: `seed.employee01@hr.local` … `seed.employee50@hr.local`. All of them use the same password.
