@@ -13,6 +13,7 @@ import { EmployeeFilters } from '../components/EmployeeFilters.tsx';
 import { EmployeeTable } from '../components/EmployeeTable.tsx';
 import { useEmployeeList } from '../hooks/useEmployees.ts';
 import {
+  DEFAULT_EMPLOYEE_FILTER,
   EMPLOYEE_SORT_OPTIONS,
   EmployeeFilterSort,
   type EmployeeFilter,
@@ -21,9 +22,7 @@ import type { EmployeeTableItem } from '../types/employee.ts';
 
 export function EmployeesPage() {
   const { data: refs, loading: refsLoading } = useReferences();
-  const [filter, setFilter] = useState<EmployeeFilter>({
-    sortBy: EmployeeFilterSort.Newest,
-  });
+  const [filter, setFilter] = useState<EmployeeFilter>(DEFAULT_EMPLOYEE_FILTER);
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [refreshToken, setRefreshToken] = useState(0);

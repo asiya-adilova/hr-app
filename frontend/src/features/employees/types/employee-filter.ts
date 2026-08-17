@@ -127,3 +127,16 @@ export function compactEmployeeFilter(filter: EmployeeFilter): EmployeeFilterPay
 
   return next;
 }
+
+export const DEFAULT_EMPLOYEE_FILTER: EmployeeFilter = {
+  sortBy: EmployeeFilterSort.Newest,
+};
+
+export function isDefaultEmployeeFilter(filter: EmployeeFilter): boolean {
+  const compact = compactEmployeeFilter(filter);
+  const keys = Object.keys(compact);
+  return (
+    keys.length === 0 ||
+    (keys.length === 1 && compact.sortBy === EmployeeFilterSort.Newest)
+  );
+}

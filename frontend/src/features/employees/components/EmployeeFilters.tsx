@@ -4,7 +4,11 @@ import { DateField } from '../../../components/ui/DateField.tsx';
 import { Input } from '../../../components/ui/Input.tsx';
 import { MultiSelect } from '../../../components/ui/MultiSelect.tsx';
 import type { CityItem, ReferenceItem } from '../../references/types/references.ts';
-import type { EmployeeFilter } from '../types/employee-filter.ts';
+import {
+  DEFAULT_EMPLOYEE_FILTER,
+  isDefaultEmployeeFilter,
+  type EmployeeFilter,
+} from '../types/employee-filter.ts';
 
 type FilterKey =
   | 'countryIds'
@@ -82,18 +86,46 @@ export function EmployeeFilters({
     });
   }
 
+  const canReset = !isDefaultEmployeeFilter(value);
+
+  function resetFilters() {
+    onChange({ ...DEFAULT_EMPLOYEE_FILTER });
+  }
+
   return (
     <aside className="rounded-2xl border border-line bg-white lg:w-72 lg:shrink-0">
-      <button
-        type="button"
-        className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold lg:hidden"
-        onClick={() => setOpen((current) => !current)}
-      >
-        Фильтры
-        <span className="text-ink-500">{open ? 'Скрыть' : 'Показать'}</span>
-      </button>
+      <div className="flex items-center justify-between gap-2 px-4 py-3 lg:hidden">
+        <span className="text-sm font-semibold">Фильтры</span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="text-xs font-medium text-brand-700 hover:text-brand-800 disabled:cursor-not-allowed disabled:text-ink-400"
+            disabled={!canReset}
+            onClick={resetFilters}
+          >
+            Сбросить
+          </button>
+          <button
+            type="button"
+            className="text-sm text-ink-500"
+            onClick={() => setOpen((current) => !current)}
+          >
+            {open ? 'Скрыть' : 'Показать'}
+          </button>
+        </div>
+      </div>
       <div className={`space-y-4 p-4 ${open ? 'block' : 'hidden'} lg:block`}>
-        <h2 className="hidden text-sm font-semibold lg:block">Фильтры</h2>
+        <div className="hidden items-center justify-between gap-2 lg:flex">
+          <h2 className="text-sm font-semibold">Фильтры</h2>
+          <button
+            type="button"
+            className="text-xs font-medium text-brand-700 hover:text-brand-800 disabled:cursor-not-allowed disabled:text-ink-400"
+            disabled={!canReset}
+            onClick={resetFilters}
+          >
+            Сбросить
+          </button>
+        </div>
         <MultiSelect
           label="Подразделение"
           options={toOptions(options.departments)}
