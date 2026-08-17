@@ -21,6 +21,18 @@ export class WorkExperienceResponseDto {
   })
   positionName!: string;
 
+  @ApiProperty({ example: 1 })
+  countryId!: number;
+
+  @ApiProperty({ example: 'Узбекистан' })
+  countryName!: string;
+
+  @ApiProperty({ example: 1 })
+  cityId!: number;
+
+  @ApiProperty({ example: 'Ташкент' })
+  cityName!: string;
+
   @ApiProperty({
     example: '2019-06-01',
   })

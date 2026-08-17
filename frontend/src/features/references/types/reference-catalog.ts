@@ -62,4 +62,16 @@ export const referenceCatalog: ReferenceCatalogItem[] = [
     description: 'Категории водительских удостоверений',
     path: '/driver-license-categories',
   },
+  {
+    key: 'countries',
+    title: 'Страны',
+    description: 'Справочник стран',
+    path: '/countries',
+  },
+  {
+    key: 'cities',
+    title: 'Города',
+    description: 'Справочник городов',
+    path: '/cities',
+  },
 ];

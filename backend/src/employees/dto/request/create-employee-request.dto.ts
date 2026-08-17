@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
@@ -126,6 +127,22 @@ export class CreateEmployeeDto {
   @IsString()
   @MaxLength(500)
   address!: string;
+
+  @ApiProperty({
+    example: 1,
+    description: 'Идентификатор страны из справочника Country',
+  })
+  @Type(() => Number)
+  @IsInt()
+  countryId!: number;
+
+  @ApiProperty({
+    example: 1,
+    description: 'Идентификатор города из справочника City',
+  })
+  @Type(() => Number)
+  @IsInt()
+  cityId!: number;
 
   @ApiProperty({
     example: 'EMP-001',

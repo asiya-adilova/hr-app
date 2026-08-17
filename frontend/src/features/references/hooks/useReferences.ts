@@ -12,6 +12,8 @@ const empty: ReferenceMap = {
   educationLevels: [],
   maritalStatuses: [],
   driverLicenseCategories: [],
+  countries: [],
+  cities: [],
 };
 
 export function useReferences() {

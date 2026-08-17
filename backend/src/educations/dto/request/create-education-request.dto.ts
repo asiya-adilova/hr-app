@@ -39,6 +39,22 @@ export class CreateEducationDto {
   educationLevelId!: number;
 
   @ApiProperty({
+    example: 1,
+    description: 'Идентификатор страны из справочника Country',
+  })
+  @Type(() => Number)
+  @IsInt()
+  countryId!: number;
+
+  @ApiProperty({
+    example: 1,
+    description: 'Идентификатор города из справочника City',
+  })
+  @Type(() => Number)
+  @IsInt()
+  cityId!: number;
+
+  @ApiProperty({
     example: 2022,
     description: 'Год окончания',
   })

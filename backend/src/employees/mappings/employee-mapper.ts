@@ -35,6 +35,8 @@ type EmployeeRecord = {
   passportIssuedBy: string;
   phone: string;
   address: string;
+  countryId: number;
+  cityId: number;
   hireDate: Date | null;
   formStep: number;
   totalExperienceMonths: number;
@@ -53,7 +55,11 @@ type EducationRecord = {
   specialty: string;
   educationLevelId: number;
   graduationYear: number;
+  countryId: number;
+  cityId: number;
   educationLevel?: NamedReference | null;
+  country?: NamedReference | null;
+  city?: NamedReference | null;
 };
 
 type WorkExperienceRecord = {
@@ -63,7 +69,11 @@ type WorkExperienceRecord = {
   startDate: Date;
   endDate: Date | null;
   responsibilities: string | null;
+  countryId: number;
+  cityId: number;
   position?: NamedReference | null;
+  country?: NamedReference | null;
+  city?: NamedReference | null;
 };
 
 type RelativeRecord = {
@@ -85,6 +95,8 @@ export const employeeLookupInclude = {
   employmentType: true,
   maritalStatus: true,
   driverLicenseCategory: true,
+  country: true,
+  city: true,
 } as const;
 
 export const employeeTableInclude = {
@@ -107,6 +119,8 @@ export type EmployeeWithLookups = EmployeeRecord & {
   employmentType: NamedReference | null;
   maritalStatus: NamedReference;
   driverLicenseCategory: NamedReference | null;
+  country: NamedReference;
+  city: NamedReference;
 };
 
 export type EmployeeWithTableReferences = EmployeeRecord & {
@@ -138,6 +152,10 @@ export class EmployeeMapper {
       specialty: education.specialty,
       educationLevelId: education.educationLevelId,
       educationLevelName: education.educationLevel?.name ?? '',
+      countryId: education.countryId,
+      countryName: education.country?.name ?? '',
+      cityId: education.cityId,
+      cityName: education.city?.name ?? '',
       graduationYear: education.graduationYear,
     };
   }
@@ -150,6 +168,10 @@ export class EmployeeMapper {
       companyName: experience.companyName,
       positionId: experience.positionId,
       positionName: experience.position?.name ?? '',
+      countryId: experience.countryId,
+      countryName: experience.country?.name ?? '',
+      cityId: experience.cityId,
+      cityName: experience.city?.name ?? '',
       startDate: experience.startDate,
       endDate: experience.endDate ?? undefined,
       isCurrent: experience.endDate == null,
@@ -252,12 +274,16 @@ export class EmployeeMapper {
     institutionName: string;
     specialty?: string;
     educationLevelId: number;
+    countryId: number;
+    cityId: number;
     graduationYear?: number;
   }) {
     return {
       institution: dto.institutionName,
       specialty: dto.specialty ?? '',
       educationLevelId: dto.educationLevelId,
+      countryId: dto.countryId,
+      cityId: dto.cityId,
       graduationYear: dto.graduationYear ?? 0,
     };
   }
@@ -265,6 +291,8 @@ export class EmployeeMapper {
   static toWorkExperienceCreateData(dto: {
     companyName: string;
     positionId: number;
+    countryId: number;
+    cityId: number;
     startDate: string | Date;
     endDate?: string | Date | null;
     isCurrent?: boolean;
@@ -273,6 +301,8 @@ export class EmployeeMapper {
     return {
       companyName: dto.companyName,
       positionId: dto.positionId,
+      countryId: dto.countryId,
+      cityId: dto.cityId,
       startDate: new Date(dto.startDate),
       endDate: dto.isCurrent
         ? null
@@ -310,6 +340,8 @@ export class EmployeeMapper {
       passportIssuedBy: dto.passport.issuedBy,
       phone: dto.contact.phone,
       address: dto.contact.address,
+      countryId: dto.contact.country?.id,
+      cityId: dto.contact.city?.id,
       employeeNumber: dto.employeeNumber,
       hireDate: dto.hireDate,
       formStep: dto.formStep ?? 0,
@@ -362,6 +394,8 @@ export class EmployeeMapper {
       phone: employee.phone,
       email: employee.account.email,
       address: employee.address,
+      country: EmployeeMapper.toReferenceResponse(employee.country),
+      city: EmployeeMapper.toReferenceResponse(employee.city),
     };
   }
 

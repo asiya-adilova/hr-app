@@ -26,6 +26,7 @@ import {
 } from '../common/services/base.service';
 import type { AuthUser } from '../security/strategies/jwt.strategy';
 import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
+import { findCityCountryMismatch } from '../common/helpers/find-city-country-mismatch';
 
 @Injectable()
 export class EmployeesService extends BaseService<
@@ -90,6 +91,8 @@ export class EmployeesService extends BaseService<
       passportIssuedBy: dto.passportIssuedBy,
       phone: dto.phone,
       address: dto.address,
+      countryId: dto.countryId,
+      cityId: dto.cityId,
       employeeNumber: dto.employeeNumber ?? `EMP-${dto.accountId}`,
       hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
       formStep: dto.formStep ?? 1,
@@ -123,6 +126,8 @@ export class EmployeesService extends BaseService<
       passportIssuedBy: dto.passportIssuedBy,
       phone: dto.phone,
       address: dto.address,
+      countryId: dto.countryId,
+      cityId: dto.cityId,
       employeeNumber: dto.employeeNumber,
       hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
       formStep: dto.formStep,
@@ -229,6 +234,16 @@ export class EmployeesService extends BaseService<
       return uniquenessError;
     }
 
+    const locationError =
+      await findCityCountryMismatch<EmployeeDetailsResponseDto>(
+        this.prisma,
+        dto.countryId,
+        dto.cityId,
+      );
+    if (locationError) {
+      return locationError;
+    }
+
     return super.create(dto);
   }
 
@@ -281,6 +296,16 @@ export class EmployeesService extends BaseService<
 
     if (uniquenessError) {
       return uniquenessError;
+    }
+
+    const locationError =
+      await findCityCountryMismatch<EmployeeDetailsResponseDto>(
+        this.prisma,
+        dto.countryId ?? currentEmployee.countryId,
+        dto.cityId ?? currentEmployee.cityId,
+      );
+    if (locationError) {
+      return locationError;
     }
 
     const updated = await super.update(

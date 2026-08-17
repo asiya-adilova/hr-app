@@ -11,6 +11,7 @@ import { UpdateEducationDto } from './dto/request/update-education-request.dto';
 import type { Education } from '../../generated/prisma/client';
 import type { AuthUser } from '../security/strategies/jwt.strategy';
 import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
+import { findCityCountryMismatch } from '../common/helpers/find-city-country-mismatch';
 
 @Injectable()
 export class EducationsService extends BaseService<
@@ -30,7 +31,7 @@ export class EducationsService extends BaseService<
   }
 
   protected getByIdInclude() {
-    return { educationLevel: true };
+    return { educationLevel: true, country: true, city: true };
   }
 
   protected getDefaultOrderBy() {
@@ -54,6 +55,8 @@ export class EducationsService extends BaseService<
       ...(dto.educationLevelId !== undefined && {
         educationLevelId: dto.educationLevelId,
       }),
+      ...(dto.countryId !== undefined && { countryId: dto.countryId }),
+      ...(dto.cityId !== undefined && { cityId: dto.cityId }),
       ...(dto.graduationYear !== undefined && {
         graduationYear: dto.graduationYear,
       }),
@@ -108,6 +111,15 @@ export class EducationsService extends BaseService<
       return uniquenessError;
     }
 
+    const locationError = await findCityCountryMismatch<EducationResponseDto>(
+      this.prisma,
+      dto.countryId,
+      dto.cityId,
+    );
+    if (locationError) {
+      return locationError;
+    }
+
     const created = await super.create(dto, extra);
     if (created.successful) {
       await syncEmployeeExperience(this.prisma, employeeId);
@@ -152,6 +164,15 @@ export class EducationsService extends BaseService<
 
     if (uniquenessError) {
       return uniquenessError;
+    }
+
+    const locationError = await findCityCountryMismatch<EducationResponseDto>(
+      this.prisma,
+      dto.countryId ?? existing.countryId,
+      dto.cityId ?? existing.cityId,
+    );
+    if (locationError) {
+      return locationError;
     }
 
     const updated = await super.update(id, dto, where);

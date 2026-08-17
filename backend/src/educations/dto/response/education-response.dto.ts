@@ -24,6 +24,18 @@ export class EducationResponseDto {
   })
   educationLevelName!: string;
 
+  @ApiProperty({ example: 1 })
+  countryId!: number;
+
+  @ApiProperty({ example: 'Узбекистан' })
+  countryName!: string;
+
+  @ApiProperty({ example: 1 })
+  cityId!: number;
+
+  @ApiProperty({ example: 'Ташкент' })
+  cityName!: string;
+
   @ApiPropertyOptional({ example: 2022 })
   graduationYear?: number;
 }

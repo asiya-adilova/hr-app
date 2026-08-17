@@ -3,7 +3,7 @@ import { Table } from '../../../components/ui/Table.tsx';
 import { routes } from '../../../constants/routes.ts';
 import { useReferences } from '../hooks/useReferences.ts';
 import { referenceCatalog } from '../types/reference-catalog.ts';
-import type { ReferenceMap } from '../types/references.ts';
+import type { CityItem, ReferenceMap } from '../types/references.ts';
 
 export function ReferenceTablePage() {
   const params = useParams();
@@ -30,6 +30,21 @@ export function ReferenceTablePage() {
       {error ? <p className="text-sm text-rose-600">{error}</p> : null}
       {loading ? (
         <p className="text-sm text-ink-500">Загружаем таблицу...</p>
+      ) : type === 'cities' ? (
+        <Table
+          rows={data.cities}
+          empty="Записей нет"
+          columns={[
+            { key: 'id', header: 'ID', render: (row: CityItem) => row.id },
+            { key: 'name', header: 'Название', render: (row: CityItem) => row.name },
+            {
+              key: 'country',
+              header: 'Страна',
+              render: (row: CityItem) =>
+                data.countries.find((country) => country.id === row.countryId)?.name ?? '—',
+            },
+          ]}
+        />
       ) : (
         <Table
           rows={rows}

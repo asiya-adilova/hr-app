@@ -67,6 +67,16 @@ export class EmployeeContactResponseDto {
     example: 'г. Ташкент, Мирзо-Улугбекский район',
   })
   address!: string;
+
+  @ApiPropertyOptional({
+    type: EmployeeReferenceResponseDto,
+  })
+  country?: EmployeeReferenceResponseDto;
+
+  @ApiPropertyOptional({
+    type: EmployeeReferenceResponseDto,
+  })
+  city?: EmployeeReferenceResponseDto;
 }
 
 export class EmployeeDriverLicenseResponseDto {

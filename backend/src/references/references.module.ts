@@ -17,6 +17,10 @@ import { MaritalStatusesController } from './marital-statuses/marital-statuses.c
 import { MaritalStatusesService } from './marital-statuses/marital-statuses.service';
 import { DriverLicenseCategoriesController } from './driver-license-categories/driver-license-categories.controller';
 import { DriverLicenseCategoriesService } from './driver-license-categories/driver-license-categories.service';
+import { CountriesController } from './countries/countries.controller';
+import { CountriesService } from './countries/countries.service';
+import { CitiesController } from './cities/cities.controller';
+import { CitiesService } from './cities/cities.service';
 
 @Module({
   controllers: [
@@ -29,6 +33,8 @@ import { DriverLicenseCategoriesService } from './driver-license-categories/driv
     EducationLevelsController,
     MaritalStatusesController,
     DriverLicenseCategoriesController,
+    CountriesController,
+    CitiesController,
   ],
   providers: [
     GendersService,
@@ -40,6 +46,8 @@ import { DriverLicenseCategoriesService } from './driver-license-categories/driv
     EducationLevelsService,
     MaritalStatusesService,
     DriverLicenseCategoriesService,
+    CountriesService,
+    CitiesService,
   ],
 })
 export class ReferencesModule {}

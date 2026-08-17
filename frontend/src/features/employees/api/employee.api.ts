@@ -58,7 +58,10 @@ export const employeeApi = {
     );
   },
 
-  addEducation(employeeId: number, payload: Omit<EducationItem, 'id'>) {
+  addEducation(
+    employeeId: number,
+    payload: Omit<EducationItem, 'id' | 'educationLevelName' | 'countryName' | 'cityName'>,
+  ) {
     return apiRequest<EducationItem>(`/employees/${employeeId}/educations`, {
       method: 'POST',
       body: payload,
@@ -67,11 +70,45 @@ export const employeeApi = {
 
   addWorkExperience(
     employeeId: number,
-    payload: Omit<WorkExperienceItem, 'id'>,
+    payload: Omit<WorkExperienceItem, 'id' | 'positionName' | 'countryName' | 'cityName'>,
   ) {
     return apiRequest<WorkExperienceItem>(
       `/employees/${employeeId}/work-experiences`,
       { method: 'POST', body: payload },
     );
+  },
+
+  updateWorkExperience(
+    employeeId: number,
+    id: number,
+    payload: Omit<WorkExperienceItem, 'id' | 'positionName' | 'countryName' | 'cityName'>,
+  ) {
+    return apiRequest<WorkExperienceItem>(
+      `/employees/${employeeId}/work-experiences/${id}`,
+      { method: 'PUT', body: payload },
+    );
+  },
+
+  deleteWorkExperience(employeeId: number, id: number) {
+    return apiRequest<void>(`/employees/${employeeId}/work-experiences/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  updateEducation(
+    employeeId: number,
+    id: number,
+    payload: Omit<EducationItem, 'id' | 'educationLevelName' | 'countryName' | 'cityName'>,
+  ) {
+    return apiRequest<EducationItem>(`/employees/${employeeId}/educations/${id}`, {
+      method: 'PUT',
+      body: payload,
+    });
+  },
+
+  deleteEducation(employeeId: number, id: number) {
+    return apiRequest<void>(`/employees/${employeeId}/educations/${id}`, {
+      method: 'DELETE',
+    });
   },
 };

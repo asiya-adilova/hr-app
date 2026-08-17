@@ -11,6 +11,7 @@ import { UpdateWorkExperienceDto } from './dto/request/update-work-experience-re
 import type { WorkExperience } from '../../generated/prisma/client';
 import type { AuthUser } from '../security/strategies/jwt.strategy';
 import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
+import { findCityCountryMismatch } from '../common/helpers/find-city-country-mismatch';
 
 @Injectable()
 export class WorkExperiencesService extends BaseService<
@@ -30,7 +31,7 @@ export class WorkExperiencesService extends BaseService<
   }
 
   protected getByIdInclude() {
-    return { position: true };
+    return { position: true, country: true, city: true };
   }
 
   protected getDefaultOrderBy() {
@@ -49,6 +50,8 @@ export class WorkExperiencesService extends BaseService<
     return {
       ...(dto.companyName !== undefined && { companyName: dto.companyName }),
       ...(dto.positionId !== undefined && { positionId: dto.positionId }),
+      ...(dto.countryId !== undefined && { countryId: dto.countryId }),
+      ...(dto.cityId !== undefined && { cityId: dto.cityId }),
       ...(dto.startDate !== undefined && {
         startDate: new Date(dto.startDate),
       }),
@@ -117,6 +120,16 @@ export class WorkExperiencesService extends BaseService<
       return uniquenessError;
     }
 
+    const locationError =
+      await findCityCountryMismatch<WorkExperienceResponseDto>(
+        this.prisma,
+        dto.countryId,
+        dto.cityId,
+      );
+    if (locationError) {
+      return locationError;
+    }
+
     const created = await super.create(dto, extra);
     if (created.successful) {
       await syncEmployeeExperience(this.prisma, employeeId);
@@ -166,6 +179,16 @@ export class WorkExperiencesService extends BaseService<
 
     if (uniquenessError) {
       return uniquenessError;
+    }
+
+    const locationError =
+      await findCityCountryMismatch<WorkExperienceResponseDto>(
+        this.prisma,
+        dto.countryId ?? existing.countryId,
+        dto.cityId ?? existing.cityId,
+      );
+    if (locationError) {
+      return locationError;
     }
 
     const updated = await super.update(id, dto, where);

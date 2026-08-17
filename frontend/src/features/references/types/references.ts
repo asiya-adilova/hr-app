@@ -3,6 +3,10 @@ export type ReferenceItem = {
   name: string;
 };
 
+export type CityItem = ReferenceItem & {
+  countryId: number;
+};
+
 export type ReferenceMap = {
   genders: ReferenceItem[];
   citizenships: ReferenceItem[];
@@ -13,4 +17,6 @@ export type ReferenceMap = {
   educationLevels: ReferenceItem[];
   maritalStatuses: ReferenceItem[];
   driverLicenseCategories: ReferenceItem[];
+  countries: ReferenceItem[];
+  cities: CityItem[];
 };

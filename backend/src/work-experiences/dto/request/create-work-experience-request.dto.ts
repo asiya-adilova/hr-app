@@ -32,6 +32,22 @@ export class CreateWorkExperienceDto {
   positionId!: number;
 
   @ApiProperty({
+    example: 1,
+    description: 'Идентификатор страны из справочника Country',
+  })
+  @Type(() => Number)
+  @IsInt()
+  countryId!: number;
+
+  @ApiProperty({
+    example: 1,
+    description: 'Идентификатор города из справочника City',
+  })
+  @Type(() => Number)
+  @IsInt()
+  cityId!: number;
+
+  @ApiProperty({
     example: '2019-06-01',
     description: 'Дата начала работы',
     type: String,

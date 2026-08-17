@@ -9,6 +9,10 @@ export type EducationItem = {
   specialty: string;
   educationLevelId: number;
   educationLevelName?: string;
+  countryId: number;
+  countryName?: string;
+  cityId: number;
+  cityName?: string;
   graduationYear: number;
 };
 
@@ -17,6 +21,10 @@ export type WorkExperienceItem = {
   companyName: string;
   positionId: number;
   positionName?: string;
+  countryId: number;
+  countryName?: string;
+  cityId: number;
+  cityName?: string;
   startDate: string;
   endDate?: string;
   isCurrent: boolean;
@@ -42,6 +50,8 @@ export type EmployeeDetails = {
     phone: string;
     email?: string;
     address: string;
+    country?: EmployeeReference;
+    city?: EmployeeReference;
   };
   hireDate?: string;
   formStep?: number;
@@ -77,6 +87,8 @@ export type CreateEmployeePayload = {
   passportIssuedBy: string;
   phone: string;
   address: string;
+  countryId: number;
+  cityId: number;
   employeeNumber?: string;
   hireDate?: string;
   genderId: number;

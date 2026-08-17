@@ -5,6 +5,7 @@ import { PhoneField } from '../../../components/ui/PhoneField.tsx';
 import { Input } from '../../../components/ui/Input.tsx';
 import { Select } from '../../../components/ui/Select.tsx';
 import { Stepper } from '../../../components/ui/Stepper.tsx';
+import { ApiError } from '../../../services/api-client.ts';
 import {
   BIRTH_DATE_MAX,
   digitsOnly,
@@ -18,12 +19,16 @@ import {
   todayIsoDate,
 } from '../../../utils/validation.ts';
 import { useReferences } from '../../references/hooks/useReferences.ts';
+import { employeeApi } from '../api/employee.api.ts';
 import type {
   CreateEmployeePayload,
   EducationItem,
   EmployeeDetails,
   WorkExperienceItem,
 } from '../types/employee.ts';
+import { EducationCard, type EducationCardItem } from './EducationCard.tsx';
+import { ExperienceCard, type ExperienceCardItem } from './ExperienceCard.tsx';
+import { CountryCityFields } from './CountryCityFields.tsx';
 
 const steps = [
   { title: 'Контакты', hint: 'Личные и паспортные данные' },
@@ -46,6 +51,8 @@ type FormValues = {
   passportExpireDate: string;
   passportIssuedBy: string;
   phone: string;
+  countryId: string;
+  cityId: string;
   address: string;
   employeeNumber: string;
   hireDate: string;
@@ -60,24 +67,8 @@ type FormValues = {
   militaryService: string;
   hasDriverLicense: string;
   additionalInfo: string;
-  educations: EducationFormItem[];
-  workExperiences: WorkExperienceFormItem[];
-};
-
-type EducationFormItem = {
-  institutionName: string;
-  specialty: string;
-  educationLevelId: string;
-  graduationYear: number;
-};
-
-type WorkExperienceFormItem = {
-  companyName: string;
-  positionId: string;
-  startDate: string;
-  endDate: string;
-  isCurrent: boolean;
-  responsibilities: string;
+  educations: EducationCardItem[];
+  workExperiences: ExperienceCardItem[];
 };
 
 type EmployeeFormProps = {
@@ -94,30 +85,44 @@ type EmployeeFormProps = {
   onComplete?: () => void;
 };
 
-function emptyEducation(): EducationFormItem {
+function nextItemKey() {
+  return `item-${crypto.randomUUID()}`;
+}
+
+function emptyEducation(): EducationCardItem {
   return {
+    key: nextItemKey(),
     institutionName: '',
     specialty: '',
     educationLevelId: '',
+    countryId: '',
+    cityId: '',
     graduationYear: new Date().getFullYear(),
+    view: false,
+    expanded: false,
   };
 }
 
-function emptyExperience(): WorkExperienceFormItem {
+function emptyExperience(): ExperienceCardItem {
   return {
+    key: nextItemKey(),
     companyName: '',
     positionId: '',
+    countryId: '',
+    cityId: '',
     startDate: '',
     endDate: '',
     isCurrent: false,
     responsibilities: '',
+    view: false,
+    expanded: false,
   };
 }
 
 const DUPLICATE_EXPERIENCE_MESSAGE =
   'Нельзя указать один и тот же опыт работы несколько раз';
 
-function experiencePeriod(item: WorkExperienceFormItem) {
+function experiencePeriod(item: ExperienceCardItem) {
   const company = item.companyName.trim().toLowerCase();
   const positionId = item.positionId.trim();
   const startDate = item.startDate.slice(0, 10);
@@ -149,6 +154,8 @@ function fromInitial(
     passportExpireDate: initial?.passport.expireDate?.toString().slice(0, 10) ?? '',
     passportIssuedBy: initial?.passport.issuedBy ?? '',
     phone: initial?.contact.phone ?? '',
+    countryId: initial?.contact.country ? String(initial.contact.country.id) : '',
+    cityId: initial?.contact.city ? String(initial.contact.city.id) : '',
     address: initial?.contact.address ?? '',
     employeeNumber: initial?.employeeNumber ?? hint,
     hireDate: initial?.hireDate?.toString().slice(0, 10) ?? '',
@@ -169,20 +176,38 @@ function fromInitial(
     additionalInfo: initial?.additionalInfo ?? '',
     educations: initial?.education.length
       ? initial.education.map((item) => ({
+          key: item.id ? `education-${item.id}` : nextItemKey(),
+          id: item.id,
           institutionName: item.institutionName,
           specialty: item.specialty,
           educationLevelId: item.educationLevelId ? String(item.educationLevelId) : '',
+          educationLevelName: item.educationLevelName,
+          countryId: item.countryId ? String(item.countryId) : '',
+          countryName: item.countryName,
+          cityId: item.cityId ? String(item.cityId) : '',
+          cityName: item.cityName,
           graduationYear: item.graduationYear,
+          view: Boolean(item.id),
+          expanded: false,
         }))
       : [],
     workExperiences: initial?.workExperience.length
       ? initial.workExperience.map((item) => ({
+          key: item.id ? `experience-${item.id}` : nextItemKey(),
+          id: item.id,
           companyName: item.companyName,
           positionId: item.positionId ? String(item.positionId) : '',
+          positionName: item.positionName,
+          countryId: item.countryId ? String(item.countryId) : '',
+          countryName: item.countryName,
+          cityId: item.cityId ? String(item.cityId) : '',
+          cityName: item.cityName,
           startDate: item.startDate?.toString().slice(0, 10) ?? '',
           endDate: item.endDate?.toString().slice(0, 10) ?? '',
           isCurrent: item.isCurrent,
           responsibilities: item.responsibilities ?? '',
+          view: Boolean(item.id),
+          expanded: false,
         }))
       : [],
   };
@@ -206,6 +231,8 @@ function snapshotForStep(step: number, values: FormValues) {
       passportExpireDate: values.passportExpireDate,
       passportIssuedBy: values.passportIssuedBy,
       phone: values.phone,
+      countryId: values.countryId,
+      cityId: values.cityId,
       address: values.address,
       genderId: values.genderId,
       citizenshipId: values.citizenshipId,
@@ -227,12 +254,8 @@ function snapshotForStep(step: number, values: FormValues) {
   if (step === 2) {
     return {
       workExperiences: values.workExperiences.map((item) => ({
-        companyName: item.companyName,
-        positionId: item.positionId,
-        startDate: item.startDate,
-        endDate: item.isCurrent ? '' : (item.endDate ?? ''),
-        isCurrent: item.isCurrent,
-        responsibilities: (item.responsibilities ?? '').trim(),
+        id: item.id ?? null,
+        view: item.view,
       })),
     };
   }
@@ -240,10 +263,8 @@ function snapshotForStep(step: number, values: FormValues) {
   if (step === 3) {
     return {
       educations: values.educations.map((item) => ({
-        institutionName: item.institutionName,
-        specialty: item.specialty,
-        educationLevelId: item.educationLevelId,
-        graduationYear: item.graduationYear,
+        id: item.id ?? null,
+        view: item.view,
       })),
     };
   }
@@ -262,6 +283,102 @@ function isStepDirty(step: number, current: FormValues, saved: FormValues) {
     JSON.stringify(snapshotForStep(step, current)) !==
     JSON.stringify(snapshotForStep(step, saved))
   );
+}
+
+function addExperienceFieldErrors(
+  item: ExperienceCardItem,
+  index: number,
+  nextErrors: Record<string, string>,
+) {
+  if (!item.companyName.trim()) {
+    nextErrors[`experience-${index}-company`] = 'Обязательно';
+  }
+  if (!item.positionId) {
+    nextErrors[`experience-${index}-position`] = 'Обязательно';
+  }
+  if (!item.countryId) {
+    nextErrors[`experience-${index}-country`] = 'Обязательно';
+  }
+  if (!item.cityId) {
+    nextErrors[`experience-${index}-city`] = 'Обязательно';
+  }
+  if (!item.startDate) {
+    nextErrors[`experience-${index}-start`] = 'Обязательно';
+  } else if (item.startDate > todayIsoDate()) {
+    nextErrors[`experience-${index}-start`] = 'Дата начала не может быть в будущем';
+  }
+  if (!item.isCurrent && !item.endDate) {
+    nextErrors[`experience-${index}-end`] = 'Обязательно';
+  } else if (
+    item.startDate &&
+    !item.isCurrent &&
+    item.endDate &&
+    item.startDate > item.endDate
+  ) {
+    nextErrors[`experience-${index}-end`] =
+      'Дата окончания не может быть раньше даты начала';
+  }
+  if (!item.responsibilities?.trim()) {
+    nextErrors[`experience-${index}-responsibilities`] = 'Обязательно';
+  }
+}
+
+function addExperienceOverlapErrors(
+  items: ExperienceCardItem[],
+  nextErrors: Record<string, string>,
+) {
+  const overlappingIndexes = new Set<number>();
+  const periods = items.map((item) => experiencePeriod(item));
+
+  for (let first = 0; first < periods.length; first += 1) {
+    const firstPeriod = periods[first];
+    if (!firstPeriod) {
+      continue;
+    }
+    for (let second = first + 1; second < periods.length; second += 1) {
+      const secondPeriod = periods[second];
+      if (!secondPeriod) {
+        continue;
+      }
+      if (
+        firstPeriod.company === secondPeriod.company &&
+        firstPeriod.positionId === secondPeriod.positionId &&
+        periodsOverlap(firstPeriod, secondPeriod)
+      ) {
+        overlappingIndexes.add(first);
+        overlappingIndexes.add(second);
+      }
+    }
+  }
+
+  for (const index of overlappingIndexes) {
+    nextErrors[`experience-${index}-duplicate`] = DUPLICATE_EXPERIENCE_MESSAGE;
+  }
+}
+
+function addEducationFieldErrors(
+  item: EducationCardItem,
+  index: number,
+  nextErrors: Record<string, string>,
+) {
+  if (!item.institutionName.trim()) {
+    nextErrors[`education-${index}-institution`] = 'Обязательно';
+  }
+  if (!item.specialty.trim()) {
+    nextErrors[`education-${index}-specialty`] = 'Обязательно';
+  }
+  if (!item.educationLevelId) {
+    nextErrors[`education-${index}-level`] = 'Обязательно';
+  }
+  if (!item.countryId) {
+    nextErrors[`education-${index}-country`] = 'Обязательно';
+  }
+  if (!item.cityId) {
+    nextErrors[`education-${index}-city`] = 'Обязательно';
+  }
+  if (!item.graduationYear) {
+    nextErrors[`education-${index}-year`] = 'Обязательно';
+  }
 }
 
 function initialMaxReached(formStep?: number) {
@@ -299,7 +416,10 @@ export function EmployeeForm({
   const [maxReached, setMaxReached] = useState(() =>
     initialMaxReached(initial?.formStep),
   );
+  const [savedFormStep, setSavedFormStep] = useState(initial?.formStep ?? 0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const options = useMemo(
     () => ({
@@ -333,12 +453,275 @@ export function EmployeeForm({
         value: item.id,
         label: item.name,
       })),
+      countries: refs.countries.map((item) => ({
+        value: item.id,
+        label: item.name,
+      })),
     }),
     [refs],
   );
 
   function setField<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function patchExperience(index: number, item: ExperienceCardItem) {
+    const workExperiences = [...values.workExperiences];
+    workExperiences[index] = item;
+    setField('workExperiences', workExperiences);
+  }
+
+  function patchEducation(index: number, item: EducationCardItem) {
+    const educations = [...values.educations];
+    educations[index] = item;
+    setField('educations', educations);
+  }
+
+  function experiencePayload(item: ExperienceCardItem) {
+    return {
+      companyName: item.companyName,
+      positionId: Number(item.positionId),
+      countryId: Number(item.countryId),
+      cityId: Number(item.cityId),
+      startDate: item.startDate,
+      endDate: item.isCurrent ? undefined : item.endDate || undefined,
+      isCurrent: item.isCurrent,
+      responsibilities: item.responsibilities.trim(),
+    };
+  }
+
+  function educationPayload(item: EducationCardItem) {
+    return {
+      institutionName: item.institutionName,
+      specialty: item.specialty,
+      educationLevelId: Number(item.educationLevelId),
+      countryId: Number(item.countryId),
+      cityId: Number(item.cityId),
+      graduationYear: Number(item.graduationYear),
+    };
+  }
+
+  async function commitExperienceItem(
+    employeeId: number,
+    item: ExperienceCardItem,
+  ): Promise<ExperienceCardItem> {
+    const committed = savedValues.workExperiences.find((entry) => entry.key === item.key);
+    const unchanged =
+      Boolean(item.id) &&
+      committed &&
+      JSON.stringify(experiencePayload(item)) === JSON.stringify(experiencePayload(committed));
+
+    if (unchanged) {
+      return { ...item, view: true, expanded: false };
+    }
+
+    const saved = item.id
+      ? await employeeApi.updateWorkExperience(employeeId, item.id, experiencePayload(item))
+      : await employeeApi.addWorkExperience(employeeId, experiencePayload(item));
+
+    return {
+      ...item,
+      id: saved.id,
+      positionName: saved.positionName,
+      countryName: saved.countryName,
+      cityName: saved.cityName,
+      view: true,
+      expanded: false,
+    };
+  }
+
+  async function commitEducationItem(
+    employeeId: number,
+    item: EducationCardItem,
+  ): Promise<EducationCardItem> {
+    const committed = savedValues.educations.find((entry) => entry.key === item.key);
+    const unchanged =
+      Boolean(item.id) &&
+      committed &&
+      JSON.stringify(educationPayload(item)) === JSON.stringify(educationPayload(committed));
+
+    if (unchanged) {
+      return { ...item, view: true, expanded: false };
+    }
+
+    const saved = item.id
+      ? await employeeApi.updateEducation(employeeId, item.id, educationPayload(item))
+      : await employeeApi.addEducation(employeeId, educationPayload(item));
+
+    return {
+      ...item,
+      id: saved.id,
+      educationLevelName: saved.educationLevelName,
+      countryName: saved.countryName,
+      cityName: saved.cityName,
+      view: true,
+      expanded: false,
+    };
+  }
+
+  async function persistPendingExperiences(): Promise<ExperienceCardItem[] | null> {
+    const employeeId = initial?.id;
+    if (!employeeId) {
+      setActionError('Сначала сохраните контактные данные');
+      return null;
+    }
+
+    let workExperiences = [...values.workExperiences];
+    setActionError(null);
+    try {
+      for (let index = 0; index < workExperiences.length; index += 1) {
+        const item = workExperiences[index];
+        if (item.view) {
+          continue;
+        }
+        setSavingKey(item.key);
+        workExperiences[index] = await commitExperienceItem(employeeId, item);
+      }
+      setField('workExperiences', workExperiences);
+      return workExperiences;
+    } catch (caught) {
+      setField('workExperiences', workExperiences);
+      setSavedValues(cloneFormValues({ ...values, workExperiences }));
+      setActionError(
+        caught instanceof ApiError ? caught.message : 'Не удалось сохранить опыт работы',
+      );
+      return null;
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  async function persistPendingEducations(): Promise<EducationCardItem[] | null> {
+    const employeeId = initial?.id;
+    if (!employeeId) {
+      setActionError('Сначала сохраните контактные данные');
+      return null;
+    }
+
+    let educations = [...values.educations];
+    setActionError(null);
+    try {
+      for (let index = 0; index < educations.length; index += 1) {
+        const item = educations[index];
+        if (item.view) {
+          continue;
+        }
+        setSavingKey(item.key);
+        educations[index] = await commitEducationItem(employeeId, item);
+      }
+      setField('educations', educations);
+      return educations;
+    } catch (caught) {
+      setField('educations', educations);
+      setSavedValues(cloneFormValues({ ...values, educations }));
+      setActionError(
+        caught instanceof ApiError ? caught.message : 'Не удалось сохранить образование',
+      );
+      return null;
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  async function saveExperience(index: number) {
+    const item = values.workExperiences[index];
+    const employeeId = initial?.id;
+    const nextErrors: Record<string, string> = {};
+    addExperienceFieldErrors(item, index, nextErrors);
+    addExperienceOverlapErrors(values.workExperiences, nextErrors);
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0 || !employeeId) {
+      if (!employeeId) {
+        setActionError('Сначала сохраните контактные данные');
+      }
+      return;
+    }
+
+    setSavingKey(item.key);
+    setActionError(null);
+    try {
+      const workExperiences = [...values.workExperiences];
+      workExperiences[index] = await commitExperienceItem(employeeId, item);
+      setField('workExperiences', workExperiences);
+      setSavedValues(cloneFormValues({ ...values, workExperiences }));
+    } catch (caught) {
+      setActionError(
+        caught instanceof ApiError ? caught.message : 'Не удалось сохранить опыт работы',
+      );
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  async function saveEducation(index: number) {
+    const item = values.educations[index];
+    const employeeId = initial?.id;
+    const nextErrors: Record<string, string> = {};
+    addEducationFieldErrors(item, index, nextErrors);
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0 || !employeeId) {
+      if (!employeeId) {
+        setActionError('Сначала сохраните контактные данные');
+      }
+      return;
+    }
+
+    setSavingKey(item.key);
+    setActionError(null);
+    try {
+      const educations = [...values.educations];
+      educations[index] = await commitEducationItem(employeeId, item);
+      setField('educations', educations);
+      setSavedValues(cloneFormValues({ ...values, educations }));
+    } catch (caught) {
+      setActionError(
+        caught instanceof ApiError ? caught.message : 'Не удалось сохранить образование',
+      );
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  async function deleteExperience(index: number) {
+    const item = values.workExperiences[index];
+    const employeeId = initial?.id;
+    setActionError(null);
+    try {
+      if (item.id && employeeId) {
+        setSavingKey(item.key);
+        await employeeApi.deleteWorkExperience(employeeId, item.id);
+      }
+      const workExperiences = values.workExperiences.filter((_, itemIndex) => itemIndex !== index);
+      setField('workExperiences', workExperiences);
+      setSavedValues(cloneFormValues({ ...values, workExperiences }));
+    } catch (caught) {
+      setActionError(
+        caught instanceof ApiError ? caught.message : 'Не удалось удалить опыт работы',
+      );
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  async function deleteEducation(index: number) {
+    const item = values.educations[index];
+    const employeeId = initial?.id;
+    setActionError(null);
+    try {
+      if (item.id && employeeId) {
+        setSavingKey(item.key);
+        await employeeApi.deleteEducation(employeeId, item.id);
+      }
+      const educations = values.educations.filter((_, itemIndex) => itemIndex !== index);
+      setField('educations', educations);
+      setSavedValues(cloneFormValues({ ...values, educations }));
+    } catch (caught) {
+      setActionError(
+        caught instanceof ApiError ? caught.message : 'Не удалось удалить образование',
+      );
+    } finally {
+      setSavingKey(null);
+    }
   }
 
   function collectStepErrors(current: number) {
@@ -368,9 +751,11 @@ export function EmployeeForm({
       if (!required(values.passportIssuedBy)) nextErrors.passportIssuedBy = 'Обязательно';
       if (!required(values.phone)) {
         nextErrors.phone = 'Обязательно';
-      } else if (!isValidPhone(values.phone)) {
+      } else       if (!isValidPhone(values.phone)) {
         nextErrors.phone = 'Укажите корректный номер телефона';
       }
+      if (!required(values.countryId)) nextErrors.countryId = 'Обязательно';
+      if (!required(values.cityId)) nextErrors.cityId = 'Обязательно';
       if (!required(values.address)) nextErrors.address = 'Обязательно';
       if (!required(values.genderId)) nextErrors.genderId = 'Обязательно';
       if (!required(values.citizenshipId)) nextErrors.citizenshipId = 'Обязательно';
@@ -387,76 +772,18 @@ export function EmployeeForm({
     }
 
     if (current === 2) {
-      const overlappingIndexes = new Set<number>();
-      const periods = values.workExperiences.map((item) => experiencePeriod(item));
-
       values.workExperiences.forEach((item, index) => {
-        if (!item.companyName.trim()) {
-          nextErrors[`experience-${index}-company`] = 'Обязательно';
-        }
-        if (!item.positionId) {
-          nextErrors[`experience-${index}-position`] = 'Обязательно';
-        }
-        if (!item.startDate) {
-          nextErrors[`experience-${index}-start`] = 'Обязательно';
-        } else if (item.startDate > todayIsoDate()) {
-          nextErrors[`experience-${index}-start`] = 'Дата начала не может быть в будущем';
-        }
-        if (!item.isCurrent && !item.endDate) {
-          nextErrors[`experience-${index}-end`] = 'Обязательно';
-        } else if (
-          item.startDate &&
-          !item.isCurrent &&
-          item.endDate &&
-          item.startDate > item.endDate
-        ) {
-          nextErrors[`experience-${index}-end`] =
-            'Дата окончания не может быть раньше даты начала';
-        }
-        if (!item.responsibilities?.trim()) {
-          nextErrors[`experience-${index}-responsibilities`] = 'Обязательно';
+        if (!item.view) {
+          addExperienceFieldErrors(item, index, nextErrors);
         }
       });
-
-      for (let first = 0; first < periods.length; first += 1) {
-        const firstPeriod = periods[first];
-        if (!firstPeriod) {
-          continue;
-        }
-        for (let second = first + 1; second < periods.length; second += 1) {
-          const secondPeriod = periods[second];
-          if (!secondPeriod) {
-            continue;
-          }
-          if (
-            firstPeriod.company === secondPeriod.company &&
-            firstPeriod.positionId === secondPeriod.positionId &&
-            periodsOverlap(firstPeriod, secondPeriod)
-          ) {
-            overlappingIndexes.add(first);
-            overlappingIndexes.add(second);
-          }
-        }
-      }
-
-      for (const index of overlappingIndexes) {
-        nextErrors[`experience-${index}-duplicate`] = DUPLICATE_EXPERIENCE_MESSAGE;
-      }
+      addExperienceOverlapErrors(values.workExperiences, nextErrors);
     }
 
     if (current === 3) {
       values.educations.forEach((item, index) => {
-        if (!item.institutionName.trim()) {
-          nextErrors[`education-${index}-institution`] = 'Обязательно';
-        }
-        if (!item.specialty.trim()) {
-          nextErrors[`education-${index}-specialty`] = 'Обязательно';
-        }
-        if (!item.educationLevelId) {
-          nextErrors[`education-${index}-level`] = 'Обязательно';
-        }
-        if (!item.graduationYear) {
-          nextErrors[`education-${index}-year`] = 'Обязательно';
+        if (!item.view) {
+          addEducationFieldErrors(item, index, nextErrors);
         }
       });
     }
@@ -492,6 +819,8 @@ export function EmployeeForm({
       passportExpireDate: values.passportExpireDate,
       passportIssuedBy: values.passportIssuedBy,
       phone: values.phone,
+      countryId: Number(values.countryId),
+      cityId: Number(values.cityId),
       address: values.address,
       employeeNumber: values.employeeNumber,
       hireDate: values.hireDate || undefined,
@@ -518,11 +847,15 @@ export function EmployeeForm({
         institutionName: item.institutionName,
         specialty: item.specialty,
         educationLevelId: Number(item.educationLevelId),
+        countryId: Number(item.countryId),
+        cityId: Number(item.cityId),
         graduationYear: Number(item.graduationYear),
       })),
       workExperiences: values.workExperiences.map((item) => ({
         companyName: item.companyName,
         positionId: Number(item.positionId),
+        countryId: Number(item.countryId),
+        cityId: Number(item.cityId),
         startDate: item.startDate,
         endDate: item.isCurrent ? undefined : item.endDate || undefined,
         isCurrent: item.isCurrent,
@@ -536,12 +869,41 @@ export function EmployeeForm({
       return false;
     }
 
-    if (isStepDirty(step, values, savedValues)) {
-      const shouldAdvance = await onSaveStep(step, buildPayload());
-      if (shouldAdvance === false) {
+    let nextValues = values;
+
+    if (step === 2) {
+      const workExperiences = await persistPendingExperiences();
+      if (!workExperiences) {
         return false;
       }
-      setSavedValues(cloneFormValues(values));
+      nextValues = { ...values, workExperiences };
+    }
+
+    if (step === 3) {
+      const educations = await persistPendingEducations();
+      if (!educations) {
+        return false;
+      }
+      nextValues = { ...values, educations };
+    }
+
+    if (isStepDirty(step, nextValues, savedValues) || step === 2 || step === 3) {
+      if (step === 2 || step === 3) {
+        if (savedFormStep <= step) {
+          const shouldAdvance = await onSaveStep(step, buildPayload());
+          if (shouldAdvance === false) {
+            return false;
+          }
+          setSavedFormStep(step + 1);
+        }
+        setSavedValues(cloneFormValues(nextValues));
+      } else {
+        const shouldAdvance = await onSaveStep(step, buildPayload());
+        if (shouldAdvance === false) {
+          return false;
+        }
+        setSavedValues(cloneFormValues(nextValues));
+      }
     }
 
     setMaxReached((max) => Math.max(max, Math.min(step + 1, steps.length - 1)));
@@ -661,6 +1023,17 @@ export function EmployeeForm({
               setFieldErrors((current) => ({ ...current, phone: '' }));
             }}
           />
+          <CountryCityFields
+            countryId={values.countryId}
+            cityId={values.cityId}
+            countries={options.countries}
+            cities={refs.cities}
+            countryError={fieldErrors.countryId}
+            cityError={fieldErrors.cityId}
+            onChange={({ countryId, cityId }) => {
+              setValues((current) => ({ ...current, countryId, cityId }));
+            }}
+          />
           <Input
             label="Адрес"
             value={values.address}
@@ -743,64 +1116,27 @@ export function EmployeeForm({
 
       {step === 3 ? (
         <section className="space-y-4 rounded-3xl border border-line bg-white p-4 md:p-6">
+          {fieldErrors.educations ? (
+            <p className="text-sm text-rose-600">{fieldErrors.educations}</p>
+          ) : null}
           {values.educations.map((item, index) => (
-            <div key={index} className="grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-2">
-              <Input
-                label="Учебное заведение"
-                value={item.institutionName}
-                error={fieldErrors[`education-${index}-institution`]}
-                onChange={(event) => {
-                  const educations = [...values.educations];
-                  educations[index] = { ...item, institutionName: event.target.value };
-                  setField('educations', educations);
-                }}
-              />
-              <Input
-                label="Специальность"
-                value={item.specialty}
-                error={fieldErrors[`education-${index}-specialty`]}
-                onChange={(event) => {
-                  const educations = [...values.educations];
-                  educations[index] = { ...item, specialty: event.target.value };
-                  setField('educations', educations);
-                }}
-              />
-              <Select
-                label="Уровень образования"
-                value={item.educationLevelId}
-                options={options.educationLevels}
-                error={fieldErrors[`education-${index}-level`]}
-                onChange={(event) => {
-                  const educations = [...values.educations];
-                  educations[index] = { ...item, educationLevelId: event.target.value };
-                  setField('educations', educations);
-                }}
-              />
-              <Input
-                label="Год окончания"
-                type="number"
-                value={item.graduationYear}
-                error={fieldErrors[`education-${index}-year`]}
-                onChange={(event) => {
-                  const educations = [...values.educations];
-                  educations[index] = {
-                    ...item,
-                    graduationYear: Number(event.target.value),
-                  };
-                  setField('educations', educations);
-                }}
-              />
-              <div className="flex justify-end md:col-span-2">
-                <DeleteCardButton
-                  onClick={() =>
-                    setField(
-                      'educations',
-                      values.educations.filter((_, itemIndex) => itemIndex !== index),
-                    )
-                  }
-                />
-              </div>
-            </div>
+            <EducationCard
+              key={item.key}
+              item={item}
+              index={index}
+              options={options.educationLevels}
+              countries={options.countries}
+              cities={refs.cities}
+              errors={fieldErrors}
+              saving={savingKey === item.key}
+              onChange={(next) => patchEducation(index, next)}
+              onSave={() => void saveEducation(index)}
+              onEdit={() => patchEducation(index, { ...item, view: false })}
+              onDelete={() => void deleteEducation(index)}
+              onToggleExpand={() =>
+                patchEducation(index, { ...item, expanded: !item.expanded })
+              }
+            />
           ))}
           <Button
             type="button"
@@ -814,107 +1150,27 @@ export function EmployeeForm({
 
       {step === 2 ? (
         <section className="space-y-4 rounded-3xl border border-line bg-white p-4 md:p-6">
+          {fieldErrors.experiences ? (
+            <p className="text-sm text-rose-600">{fieldErrors.experiences}</p>
+          ) : null}
           {values.workExperiences.map((item, index) => (
-            <div
-              key={index}
-              className={`grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-2 md:p-5 ${
-                fieldErrors[`experience-${index}-duplicate`]
-                  ? 'ring-1 ring-rose-400'
-                  : ''
-              }`}
-            >
-              <Input
-                label="Организация"
-                value={item.companyName}
-                error={fieldErrors[`experience-${index}-company`]}
-                onChange={(event) => {
-                  const workExperiences = [...values.workExperiences];
-                  workExperiences[index] = { ...item, companyName: event.target.value };
-                  setField('workExperiences', workExperiences);
-                }}
-              />
-              <Select
-                label="Должность"
-                value={item.positionId}
-                options={options.positions}
-                error={fieldErrors[`experience-${index}-position`]}
-                onChange={(event) => {
-                  const workExperiences = [...values.workExperiences];
-                  workExperiences[index] = { ...item, positionId: event.target.value };
-                  setField('workExperiences', workExperiences);
-                }}
-              />
-              <DateField
-                label="Дата начала"
-                value={item.startDate}
-                max={todayIsoDate()}
-                error={fieldErrors[`experience-${index}-start`]}
-                onChange={(value) => {
-                  const workExperiences = [...values.workExperiences];
-                  workExperiences[index] = { ...item, startDate: value };
-                  setField('workExperiences', workExperiences);
-                }}
-              />
-              <div className="space-y-3">
-                <DateField
-                  label="Дата окончания"
-                  value={item.endDate ?? ''}
-                  disabled={item.isCurrent}
-                  error={fieldErrors[`experience-${index}-end`]}
-                  onChange={(value) => {
-                    const workExperiences = [...values.workExperiences];
-                    workExperiences[index] = { ...item, endDate: value };
-                    setField('workExperiences', workExperiences);
-                  }}
-                />
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={item.isCurrent}
-                    onChange={(event) => {
-                      const workExperiences = [...values.workExperiences];
-                      workExperiences[index] = {
-                        ...item,
-                        isCurrent: event.target.checked,
-                        endDate: event.target.checked ? '' : item.endDate,
-                      };
-                      setField('workExperiences', workExperiences);
-                    }}
-                  />
-                  Текущее место работы
-                </label>
-              </div>
-              <div className="md:col-span-2">
-                <Input
-                  label="Обязанности"
-                  value={item.responsibilities ?? ''}
-                  error={fieldErrors[`experience-${index}-responsibilities`]}
-                  onChange={(event) => {
-                    const workExperiences = [...values.workExperiences];
-                    workExperiences[index] = {
-                      ...item,
-                      responsibilities: event.target.value,
-                    };
-                    setField('workExperiences', workExperiences);
-                  }}
-                />
-              </div>
-              {fieldErrors[`experience-${index}-duplicate`] ? (
-                <p className="text-xs text-rose-600 md:col-span-2">
-                  {fieldErrors[`experience-${index}-duplicate`]}
-                </p>
-              ) : null}
-              <div className="flex justify-end md:col-span-2">
-                <DeleteCardButton
-                  onClick={() =>
-                    setField(
-                      'workExperiences',
-                      values.workExperiences.filter((_, itemIndex) => itemIndex !== index),
-                    )
-                  }
-                />
-              </div>
-            </div>
+            <ExperienceCard
+              key={item.key}
+              item={item}
+              index={index}
+              options={options.positions}
+              countries={options.countries}
+              cities={refs.cities}
+              errors={fieldErrors}
+              saving={savingKey === item.key}
+              onChange={(next) => patchExperience(index, next)}
+              onSave={() => void saveExperience(index)}
+              onEdit={() => patchExperience(index, { ...item, view: false })}
+              onDelete={() => void deleteExperience(index)}
+              onToggleExpand={() =>
+                patchExperience(index, { ...item, expanded: !item.expanded })
+              }
+            />
           ))}
           <Button
             type="button"
@@ -970,6 +1226,7 @@ export function EmployeeForm({
         </section>
       ) : null}
 
+      {actionError ? <p className="text-sm text-rose-600">{actionError}</p> : null}
       {error ? <p className="text-sm text-rose-600">{error}</p> : null}
 
       <div className="sticky bottom-0 z-10 -mx-4 flex justify-between gap-3 bg-page/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:bg-transparent md:px-0 md:py-0">
@@ -986,49 +1243,22 @@ export function EmployeeForm({
           <Button
             type="button"
             className="flex-1 sm:flex-none"
-            disabled={submitting}
+            disabled={submitting || Boolean(savingKey)}
             onClick={() => void handleNext()}
           >
-            {submitting ? 'Сохраняем...' : 'Далее'}
+            {submitting || savingKey ? 'Сохраняем...' : 'Далее'}
           </Button>
         ) : (
           <Button
             type="button"
             className="flex-1 sm:flex-none"
-            disabled={submitting}
+            disabled={submitting || Boolean(savingKey)}
             onClick={() => void handleSubmit()}
           >
-            {submitting ? 'Сохраняем...' : 'Сохранить анкету'}
+            {submitting || savingKey ? 'Сохраняем...' : 'Сохранить анкету'}
           </Button>
         )}
       </div>
     </div>
-  );
-}
-
-function DeleteCardButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      className="rounded-lg p-1.5 text-rose-600 transition hover:bg-rose-50"
-      aria-label="Удалить"
-      onClick={onClick}
-    >
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M4 7h16" />
-        <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-        <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
-        <path d="M10 11v6M14 11v6" />
-      </svg>
-    </button>
   );
 }

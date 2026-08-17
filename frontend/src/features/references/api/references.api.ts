@@ -1,5 +1,5 @@
 import { apiRequest } from '../../../services/api-client.ts';
-import type { ReferenceItem, ReferenceMap } from '../types/references.ts';
+import type { CityItem, ReferenceItem, ReferenceMap } from '../types/references.ts';
 
 async function getList(path: string) {
   return apiRequest<ReferenceItem[]>(path);
@@ -17,6 +17,8 @@ export const referencesApi = {
       educationLevels,
       maritalStatuses,
       driverLicenseCategories,
+      countries,
+      cities,
     ] = await Promise.all([
       getList('/genders'),
       getList('/citizenships'),
@@ -27,6 +29,8 @@ export const referencesApi = {
       getList('/education-levels'),
       getList('/marital-statuses'),
       getList('/driver-license-categories'),
+      getList('/countries'),
+      apiRequest<CityItem[]>('/cities'),
     ]);
 
     return {
@@ -39,6 +43,8 @@ export const referencesApi = {
       educationLevels,
       maritalStatuses,
       driverLicenseCategories,
+      countries,
+      cities,
     };
   },
 };

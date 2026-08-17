@@ -47,6 +47,8 @@ export function EmployeeDetails({ employee }: { employee: EmployeeDetails }) {
           <Row label="Кем выдан" value={employee.passport.issuedBy} />
           <Row label="Телефон" value={employee.contact.phone} />
           <Row label="Email" value={employee.contact.email} />
+          <Row label="Страна" value={employee.contact.country?.name} />
+          <Row label="Город" value={employee.contact.city?.name} />
           <Row label="Адрес" value={employee.contact.address} />
         </div>
       </section>
@@ -85,6 +87,11 @@ export function EmployeeDetails({ employee }: { employee: EmployeeDetails }) {
             {employee.education.map((item) => (
               <li key={item.id ?? item.institutionName} className="rounded-2xl bg-slate-50 p-4">
                 <p className="font-medium">{item.institutionName}</p>
+                {(item.cityName || item.countryName) ? (
+                  <p className="text-sm text-ink-500">
+                    {[item.cityName, item.countryName].filter(Boolean).join(', ')}
+                  </p>
+                ) : null}
                 <p className="text-sm text-ink-500">
                   {[item.educationLevelName, item.specialty, item.graduationYear]
                     .filter(Boolean)
@@ -107,6 +114,11 @@ export function EmployeeDetails({ employee }: { employee: EmployeeDetails }) {
                 <p className="font-medium">
                   {item.positionName} · {item.companyName}
                 </p>
+                {(item.cityName || item.countryName) ? (
+                  <p className="text-sm text-ink-500">
+                    {[item.cityName, item.countryName].filter(Boolean).join(', ')}
+                  </p>
+                ) : null}
                 <p className="text-sm text-ink-500">
                   {formatDate(item.startDate)} — {item.isCurrent ? 'н.в.' : formatDate(item.endDate)}
                 </p>

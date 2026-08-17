@@ -40,7 +40,7 @@ export function EditEmployeePage() {
         submitting={submitting}
         error={submitError}
         onComplete={() => navigate(routes.employeeDetails(employee.id))}
-        onSaveStep={async (step, { employee: payload, educations, workExperiences }) => {
+        onSaveStep={async (step, { employee: payload }) => {
           setSubmitting(true);
           setSubmitError(null);
           try {
@@ -59,15 +59,11 @@ export function EditEmployeePage() {
             }
 
             if (step === 2) {
-              await employeeApi.replaceWorkExperiences(employee.id, workExperiences);
               await employeeApi.update(employee.id, { formStep: 3 });
             }
 
             if (step === 3) {
-              await employeeApi.replaceEducations(employee.id, educations);
-              await employeeApi.update(employee.id, {
-                formStep: 4,
-              });
+              await employeeApi.update(employee.id, { formStep: 4 });
             }
 
             if (step === 4) {

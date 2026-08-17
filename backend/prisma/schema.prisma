@@ -72,6 +72,29 @@ model DriverLicenseCategory {
   employees Employee[]
 }
 
+model Country {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  cities          City[]
+  employees       Employee[]
+  educations      Education[]
+  workExperiences WorkExperience[]
+}
+
+model City {
+  id        Int    @id @default(autoincrement())
+  name      String
+  countryId Int
+
+  country         Country          @relation(fields: [countryId], references: [id])
+  employees       Employee[]
+  educations      Education[]
+  workExperiences WorkExperience[]
+
+  @@unique([countryId, name])
+}
+
 enum Role {
   ADMIN
   EMPLOYEE
@@ -122,6 +145,8 @@ model Employee {
 
   phone   String
   address String
+  countryId Int
+  cityId    Int
 
   // Employment
   employeeNumber String @unique
@@ -160,6 +185,8 @@ model Employee {
   employmentType EmploymentType? @relation(fields: [employmentTypeId], references: [id])
   maritalStatus MaritalStatus @relation(fields: [maritalStatusId], references: [id])
   driverLicenseCategory DriverLicenseCategory? @relation(fields: [driverLicenseCategoryId], references: [id])
+  country Country @relation(fields: [countryId], references: [id])
+  city City @relation(fields: [cityId], references: [id])
 
   relatives       Relative[]
   workExperiences WorkExperience[]
@@ -171,6 +198,8 @@ model Education {
 
   employeeId       Int
   educationLevelId Int
+  countryId        Int
+  cityId           Int
 
   institution    String
   specialty      String
@@ -183,6 +212,8 @@ model Education {
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   educationLevel EducationLevel @relation(fields: [educationLevelId], references: [id])
+  country Country @relation(fields: [countryId], references: [id])
+  city City @relation(fields: [cityId], references: [id])
 }
 
 model Relative {
@@ -209,6 +240,8 @@ model WorkExperience {
 
   employeeId Int
   positionId Int
+  countryId  Int
+  cityId     Int
 
   companyName      String
   startDate        DateTime
@@ -222,4 +255,6 @@ model WorkExperience {
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   position Position @relation(fields: [positionId], references: [id])
+  country Country @relation(fields: [countryId], references: [id])
+  city City @relation(fields: [cityId], references: [id])
 }
