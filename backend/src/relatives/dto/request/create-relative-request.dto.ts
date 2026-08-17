@@ -22,11 +22,13 @@ export class CreateRelativeDto {
   @ApiProperty({
     example: 'Каримова Дилором Рустамовна',
     description: 'ФИО родственника',
-    maxLength: 255,
+    maxLength: 100,
   })
   @IsNotEmpty()
   @IsString()
-  @MaxLength(255)
+  @MaxLength(100, {
+    message: 'ФИО не должно превышать 100 символов',
+  })
   fullName!: string;
 
   @ApiPropertyOptional({
@@ -42,11 +44,13 @@ export class CreateRelativeDto {
   @ApiPropertyOptional({
     example: 'Учитель',
     description: 'Место работы / род занятий',
-    maxLength: 255,
+    maxLength: 100,
   })
   @IsOptional()
   @IsString()
-  @MaxLength(255)
+  @MaxLength(100, {
+    message: 'Должность не должна превышать 100 символов',
+  })
   occupation?: string;
 
   @ApiPropertyOptional({

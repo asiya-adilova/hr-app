@@ -4,7 +4,11 @@ import { Input } from '../../../components/ui/Input.tsx';
 import { PhoneField } from '../../../components/ui/PhoneField.tsx';
 import { Select } from '../../../components/ui/Select.tsx';
 import { formatDate } from '../../../utils/date.ts';
-import { todayIsoDate } from '../../../utils/validation.ts';
+import {
+  RELATIVE_FULL_NAME_MAX_LENGTH,
+  RELATIVE_OCCUPATION_MAX_LENGTH,
+  todayIsoDate,
+} from '../../../utils/validation.ts';
 import {
   DeleteCardButton,
   EditCardButton,
@@ -111,6 +115,7 @@ export function RelativeCard({
     >
       <Input
         label="ФИО"
+        maxLength={RELATIVE_FULL_NAME_MAX_LENGTH}
         value={item.fullName}
         error={errors[`relative-${index}-name`]}
         onChange={(event) => onChange({ ...item, fullName: event.target.value })}
@@ -124,6 +129,7 @@ export function RelativeCard({
       />
       <Input
         label="Род занятий"
+        maxLength={RELATIVE_OCCUPATION_MAX_LENGTH}
         value={item.occupation}
         error={errors[`relative-${index}-occupation`]}
         onChange={(event) => onChange({ ...item, occupation: event.target.value })}

@@ -27,6 +27,17 @@ export function isDateBefore(
   return toDateOnly(value) < toDateOnly(minDate);
 }
 
+export function yearFromDate(
+  value: Date | string | null | undefined,
+): number | undefined {
+  if (value == null || (typeof value === 'string' && value === '')) {
+    return undefined;
+  }
+
+  const year = Number(toDateOnly(value).slice(0, 4));
+  return Number.isFinite(year) ? year : undefined;
+}
+
 export function IsDateOnOrAfterField(
   property: string,
   validationOptions?: ValidationOptions,

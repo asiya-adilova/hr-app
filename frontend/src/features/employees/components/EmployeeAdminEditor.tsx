@@ -10,8 +10,10 @@ import {
   ADDRESS_MAX_LENGTH,
   BIRTH_DATE_MAX,
   digitsOnly,
+  EMPLOYEE_NUMBER_MAX_LENGTH,
   lettersOnly,
 } from '../../../utils/validation.ts';
+import { yearFromIsoDate } from '../../../utils/date.ts';
 import { useReferences } from '../../references/hooks/useReferences.ts';
 import { employeeApi } from '../api/employee.api.ts';
 import type { EmployeeDetails as EmployeeDetailsType } from '../types/employee.ts';
@@ -164,7 +166,7 @@ export function EmployeeAdminEditor({
   async function saveExperience(index: number): Promise<boolean> {
     const item = values.workExperiences[index];
     const nextErrors: Record<string, string> = {};
-    addExperienceFieldErrors(item, index, nextErrors);
+    addExperienceFieldErrors(item, index, nextErrors, values.birthDate);
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       return false;
@@ -201,7 +203,7 @@ export function EmployeeAdminEditor({
   async function saveEducation(index: number): Promise<boolean> {
     const item = values.educations[index];
     const nextErrors: Record<string, string> = {};
-    addEducationFieldErrors(item, index, nextErrors);
+    addEducationFieldErrors(item, index, nextErrors, values.birthDate);
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       return false;
@@ -519,10 +521,16 @@ export function EmployeeAdminEditor({
                   <Input
                     label="Табельный номер"
                     autoCapitalize="characters"
+                    maxLength={EMPLOYEE_NUMBER_MAX_LENGTH}
                     value={values.employeeNumber}
                     error={fieldErrors.employeeNumber}
                     onChange={(event) =>
-                      setField('employeeNumber', event.target.value.toUpperCase())
+                      setField(
+                        'employeeNumber',
+                        event.target.value
+                          .toUpperCase()
+                          .slice(0, EMPLOYEE_NUMBER_MAX_LENGTH),
+                      )
                     }
                   />
                   <DateField
@@ -621,6 +629,7 @@ export function EmployeeAdminEditor({
                     countries={options.countries}
                     cities={refs.cities}
                     errors={fieldErrors}
+                    minDate={values.birthDate || undefined}
                     saving={savingKey === item.key}
                     onChange={(next) => {
                       const workExperiences = [...values.workExperiences];
@@ -661,6 +670,7 @@ export function EmployeeAdminEditor({
                     countries={options.countries}
                     cities={refs.cities}
                     errors={fieldErrors}
+                    minYear={yearFromIsoDate(values.birthDate)}
                     saving={savingKey === item.key}
                     onChange={(next) => {
                       const educations = [...values.educations];

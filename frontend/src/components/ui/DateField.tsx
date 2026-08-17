@@ -5,6 +5,7 @@ import {
   formatDate,
   getCalendarCells,
   toDateInput,
+  yearSelectOptions,
 } from '../../utils/date.ts';
 import { todayIsoDate } from '../../utils/validation.ts';
 import { Select } from './Select.tsx';
@@ -24,7 +25,15 @@ type DateFieldProps = {
 };
 
 function parseView(value: string, min?: string, max?: string) {
-  const iso = value || min || max || todayIsoDate();
+  let iso = value || todayIsoDate();
+  if (!value) {
+    if (max && iso > max) {
+      iso = max;
+    }
+    if (min && iso < min) {
+      iso = min;
+    }
+  }
   const [year, month] = toDateInput(iso).split('-').map(Number);
   return { year, month };
 }
@@ -48,13 +57,10 @@ export function DateField({
 
   const minYear = min ? Number(min.slice(0, 4)) : new Date().getFullYear() - 80;
   const maxYear = max ? Number(max.slice(0, 4)) : new Date().getFullYear() + 20;
-  const years = useMemo(() => {
-    const list: number[] = [];
-    for (let year = minYear; year <= maxYear; year += 1) {
-      list.push(year);
-    }
-    return list;
-  }, [minYear, maxYear]);
+  const years = useMemo(
+    () => yearSelectOptions(minYear, maxYear),
+    [minYear, maxYear],
+  );
 
   const cells = useMemo(
     () => getCalendarCells(view.year, view.month),
@@ -190,7 +196,7 @@ export function DateField({
               <Select
                 value={view.year}
                 placeholder=""
-                options={years.map((year) => ({ value: year, label: String(year) }))}
+                options={years}
                 onChange={(event) =>
                   setView((current) => ({
                     ...current,

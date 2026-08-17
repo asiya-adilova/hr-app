@@ -1,3 +1,4 @@
+import { yearFromIsoDate } from '../../../utils/date.ts';
 import {
   ADDITIONAL_INFO_MAX_LENGTH,
   ADDRESS_MAX_LENGTH,
@@ -307,6 +308,7 @@ export function addExperienceFieldErrors(
   item: ExperienceCardItem,
   index: number,
   nextErrors: Record<string, string>,
+  birthDate?: string,
 ) {
   if (!item.companyName.trim()) nextErrors[`experience-${index}-company`] = 'Обязательно';
   if (!item.positionId) nextErrors[`experience-${index}-position`] = 'Обязательно';
@@ -316,9 +318,15 @@ export function addExperienceFieldErrors(
     nextErrors[`experience-${index}-start`] = 'Обязательно';
   } else if (item.startDate > todayIsoDate()) {
     nextErrors[`experience-${index}-start`] = 'Дата начала не может быть в будущем';
+  } else if (birthDate && item.startDate < birthDate) {
+    nextErrors[`experience-${index}-start`] =
+      'Дата начала не может быть раньше даты рождения';
   }
   if (!item.isCurrent && !item.endDate) {
     nextErrors[`experience-${index}-end`] = 'Обязательно';
+  } else if (birthDate && !item.isCurrent && item.endDate && item.endDate < birthDate) {
+    nextErrors[`experience-${index}-end`] =
+      'Дата окончания не может быть раньше даты рождения';
   } else if (item.startDate && !item.isCurrent && item.endDate && item.startDate > item.endDate) {
     nextErrors[`experience-${index}-end`] =
       'Дата окончания не может быть раньше даты начала';
@@ -335,13 +343,22 @@ export function addEducationFieldErrors(
   item: EducationCardItem,
   index: number,
   nextErrors: Record<string, string>,
+  birthDate?: string,
 ) {
   if (!item.institutionName.trim()) nextErrors[`education-${index}-institution`] = 'Обязательно';
   if (!item.specialty.trim()) nextErrors[`education-${index}-specialty`] = 'Обязательно';
   if (!item.educationLevelId) nextErrors[`education-${index}-level`] = 'Обязательно';
   if (!item.countryId) nextErrors[`education-${index}-country`] = 'Обязательно';
   if (!item.cityId) nextErrors[`education-${index}-city`] = 'Обязательно';
-  if (!item.graduationYear) nextErrors[`education-${index}-year`] = 'Обязательно';
+  if (!item.graduationYear) {
+    nextErrors[`education-${index}-year`] = 'Обязательно';
+  } else {
+    const birthYear = yearFromIsoDate(birthDate);
+    if (birthYear && item.graduationYear < birthYear) {
+      nextErrors[`education-${index}-year`] =
+        'Год окончания не может быть раньше года рождения';
+    }
+  }
 }
 
 export function addRelativeFieldErrors(

@@ -28,6 +28,34 @@ export function toDateInput(value?: string | Date | null): string {
   return raw.slice(0, 10);
 }
 
+export function yearFromIsoDate(value?: string): number | undefined {
+  if (!value || !/^\d{4}/.test(value)) {
+    return undefined;
+  }
+
+  const year = Number(value.slice(0, 4));
+  return Number.isFinite(year) ? year : undefined;
+}
+
+export function currentCalendarYear(): number {
+  return new Date().getFullYear();
+}
+
+export function yearSelectOptions(
+  minYear: number,
+  maxYear = currentCalendarYear(),
+): { value: number; label: string }[] {
+  const start = Math.min(minYear, maxYear);
+  const end = Math.max(minYear, maxYear);
+  const options: { value: number; label: string }[] = [];
+
+  for (let year = end; year >= start; year -= 1) {
+    options.push({ value: year, label: String(year) });
+  }
+
+  return options;
+}
+
 export function formatDate(value?: string | Date | null): string {
   const input = toDateInput(value);
   if (!input) {

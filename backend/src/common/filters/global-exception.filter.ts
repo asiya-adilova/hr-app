@@ -63,7 +63,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         successful: false,
         error: {
           code: ErrorCode.ValidationError,
-          message: 'Ошибка валидации',
+          message: messages[0] ?? 'Ошибка валидации',
           validationErrors: messages,
         },
       });

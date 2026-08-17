@@ -12,6 +12,7 @@ import type { WorkExperience } from '../../generated/prisma/client';
 import type { AuthUser } from '../security/strategies/jwt.strategy';
 import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
 import { findCityCountryMismatch } from '../common/helpers/find-city-country-mismatch';
+import { findExperienceDatesBeforeBirthError } from '../common/helpers/find-birth-date-order-error';
 
 @Injectable()
 export class WorkExperiencesService extends BaseService<
@@ -109,6 +110,16 @@ export class WorkExperiencesService extends BaseService<
       );
     }
 
+    const dateOrderError =
+      findExperienceDatesBeforeBirthError<WorkExperienceResponseDto>({
+        birthDate: await this.getEmployeeBirthDate(employeeId),
+        startDate: dto.startDate,
+        endDate: dto.isCurrent ? undefined : dto.endDate,
+      });
+    if (dateOrderError) {
+      return dateOrderError;
+    }
+
     const uniquenessError = await this.findUniquenessError(employeeId, {
       companyName: dto.companyName,
       positionId: dto.positionId,
@@ -160,6 +171,19 @@ export class WorkExperiencesService extends BaseService<
 
     if (!existing) {
       return ServiceResult.error(ErrorCode.NotFound, this.notFoundMessage);
+    }
+
+    const isCurrent = dto.isCurrent ?? (existing.endDate == null);
+    const dateOrderError =
+      findExperienceDatesBeforeBirthError<WorkExperienceResponseDto>({
+        birthDate: await this.getEmployeeBirthDate(employeeId),
+        startDate: dto.startDate ?? existing.startDate,
+        endDate: isCurrent
+          ? undefined
+          : (dto.endDate ?? existing.endDate),
+      });
+    if (dateOrderError) {
+      return dateOrderError;
     }
 
     const uniquenessError = await this.findUniquenessError(
@@ -254,6 +278,16 @@ export class WorkExperiencesService extends BaseService<
       }
       return removed;
     });
+  }
+
+  private async getEmployeeBirthDate(
+    employeeId: number,
+  ): Promise<Date | undefined> {
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: employeeId },
+      select: { birthDate: true },
+    });
+    return employee?.birthDate;
   }
 
   private async findUniquenessError(

@@ -16,11 +16,13 @@ export class CreateWorkExperienceDto {
   @ApiProperty({
     example: 'ABC Technologies',
     description: 'Название организации',
-    maxLength: 255,
+    maxLength: 100,
   })
   @IsNotEmpty()
   @IsString()
-  @MaxLength(255)
+  @MaxLength(100, {
+    message: 'Название организации не должно превышать 100 символов',
+  })
   companyName!: string;
 
   @ApiProperty({
@@ -49,7 +51,7 @@ export class CreateWorkExperienceDto {
 
   @ApiProperty({
     example: '2019-06-01',
-    description: 'Дата начала работы',
+    description: 'Дата начала работы. Не может быть раньше даты рождения сотрудника.',
     type: String,
     format: 'date',
   })
@@ -61,7 +63,8 @@ export class CreateWorkExperienceDto {
 
   @ApiPropertyOptional({
     example: '2022-03-15',
-    description: 'Дата окончания работы. Не нужна, если это текущее место работы.',
+    description:
+      'Дата окончания работы. Не нужна, если это текущее место работы. Не может быть раньше даты рождения сотрудника.',
     type: String,
     format: 'date',
   })

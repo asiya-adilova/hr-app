@@ -5,6 +5,7 @@ import { Input } from '../../../components/ui/Input.tsx';
 import { Select } from '../../../components/ui/Select.tsx';
 import { formatDate } from '../../../utils/date.ts';
 import {
+  ORGANIZATION_NAME_MAX_LENGTH,
   RESPONSIBILITIES_MAX_LENGTH,
   todayIsoDate,
 } from '../../../utils/validation.ts';
@@ -46,6 +47,7 @@ type ExperienceCardProps = {
   countries: Option[];
   cities: CityItem[];
   errors: Record<string, string>;
+  minDate?: string;
   saving?: boolean;
   onChange: (item: ExperienceCardItem) => void;
   onSave: () => void;
@@ -61,6 +63,7 @@ export function ExperienceCard({
   countries,
   cities,
   errors,
+  minDate,
   saving,
   onChange,
   onSave,
@@ -77,6 +80,13 @@ export function ExperienceCard({
     item.countryName ||
       countries.find((option) => String(option.value) === item.countryId)?.label,
   );
+  const startMin = minDate || undefined;
+  const endMin =
+    item.startDate && startMin
+      ? item.startDate > startMin
+        ? item.startDate
+        : startMin
+      : item.startDate || startMin;
 
   if (item.view) {
     return (
@@ -122,6 +132,7 @@ export function ExperienceCard({
     >
       <Input
         label="Организация"
+        maxLength={ORGANIZATION_NAME_MAX_LENGTH}
         value={item.companyName}
         error={errors[`experience-${index}-company`]}
         onChange={(event) => onChange({ ...item, companyName: event.target.value })}
@@ -145,6 +156,7 @@ export function ExperienceCard({
       <DateField
         label="Дата начала"
         value={item.startDate}
+        min={startMin}
         max={todayIsoDate()}
         error={errors[`experience-${index}-start`]}
         onChange={(value) => onChange({ ...item, startDate: value })}
@@ -153,6 +165,7 @@ export function ExperienceCard({
         <DateField
           label="Дата окончания"
           value={item.endDate}
+          min={endMin}
           disabled={item.isCurrent}
           error={errors[`experience-${index}-end`]}
           onChange={(value) => onChange({ ...item, endDate: value })}

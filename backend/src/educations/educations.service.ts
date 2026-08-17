@@ -12,6 +12,7 @@ import type { Education } from '../../generated/prisma/client';
 import type { AuthUser } from '../security/strategies/jwt.strategy';
 import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
 import { findCityCountryMismatch } from '../common/helpers/find-city-country-mismatch';
+import { findGraduationYearBeforeBirthError } from '../common/helpers/find-birth-date-order-error';
 
 @Injectable()
 export class EducationsService extends BaseService<
@@ -100,6 +101,14 @@ export class EducationsService extends BaseService<
       );
     }
 
+    const yearError = findGraduationYearBeforeBirthError<EducationResponseDto>(
+      dto.graduationYear,
+      await this.getEmployeeBirthDate(employeeId),
+    );
+    if (yearError) {
+      return yearError;
+    }
+
     const uniquenessError = await this.findUniquenessError(employeeId, {
       institution: dto.institutionName,
       specialty: dto.specialty,
@@ -149,6 +158,14 @@ export class EducationsService extends BaseService<
 
     if (!existing) {
       return ServiceResult.error(ErrorCode.NotFound, this.notFoundMessage);
+    }
+
+    const yearError = findGraduationYearBeforeBirthError<EducationResponseDto>(
+      dto.graduationYear ?? existing.graduationYear,
+      await this.getEmployeeBirthDate(employeeId),
+    );
+    if (yearError) {
+      return yearError;
     }
 
     const uniquenessError = await this.findUniquenessError(
@@ -231,6 +248,16 @@ export class EducationsService extends BaseService<
       }
       return removed;
     });
+  }
+
+  private async getEmployeeBirthDate(
+    employeeId: number,
+  ): Promise<Date | undefined> {
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: employeeId },
+      select: { birthDate: true },
+    });
+    return employee?.birthDate;
   }
 
   private async findUniquenessError(

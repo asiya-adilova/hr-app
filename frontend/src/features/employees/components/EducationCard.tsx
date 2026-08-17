@@ -1,6 +1,11 @@
 import { Button } from '../../../components/ui/Button.tsx';
 import { Input } from '../../../components/ui/Input.tsx';
 import { Select } from '../../../components/ui/Select.tsx';
+import { yearSelectOptions } from '../../../utils/date.ts';
+import {
+  EDUCATION_SPECIALTY_MAX_LENGTH,
+  INSTITUTION_NAME_MAX_LENGTH,
+} from '../../../utils/validation.ts';
 import type { CityItem } from '../../references/types/references.ts';
 import { CountryCityFields, formatLocation } from './CountryCityFields.tsx';
 import {
@@ -37,6 +42,7 @@ type EducationCardProps = {
   countries: Option[];
   cities: CityItem[];
   errors: Record<string, string>;
+  minYear?: number;
   saving?: boolean;
   onChange: (item: EducationCardItem) => void;
   onSave: () => void;
@@ -52,6 +58,7 @@ export function EducationCard({
   countries,
   cities,
   errors,
+  minYear,
   saving,
   onChange,
   onSave,
@@ -63,6 +70,17 @@ export function EducationCard({
     item.educationLevelName ||
     options.find((option) => String(option.value) === item.educationLevelId)?.label ||
     '';
+  const yearOptions = yearSelectOptions(minYear ?? 1900, 2100);
+  if (
+    item.graduationYear &&
+    !yearOptions.some((option) => option.value === item.graduationYear)
+  ) {
+    yearOptions.push({
+      value: item.graduationYear,
+      label: String(item.graduationYear),
+    });
+  }
+
   const locationLabel = formatLocation(
     item.cityName || cities.find((city) => String(city.id) === item.cityId)?.name,
     item.countryName ||
@@ -104,6 +122,7 @@ export function EducationCard({
     <div className="grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-2">
       <Input
         label="Учебное заведение"
+        maxLength={INSTITUTION_NAME_MAX_LENGTH}
         value={item.institutionName}
         error={errors[`education-${index}-institution`]}
         onChange={(event) =>
@@ -112,6 +131,7 @@ export function EducationCard({
       />
       <Input
         label="Специальность"
+        maxLength={EDUCATION_SPECIALTY_MAX_LENGTH}
         value={item.specialty}
         error={errors[`education-${index}-specialty`]}
         onChange={(event) => onChange({ ...item, specialty: event.target.value })}
@@ -134,13 +154,16 @@ export function EducationCard({
           onChange({ ...item, educationLevelId: event.target.value })
         }
       />
-      <Input
+      <Select
         label="Год окончания"
-        type="number"
-        value={item.graduationYear}
+        value={item.graduationYear || ''}
+        options={yearOptions}
         error={errors[`education-${index}-year`]}
         onChange={(event) =>
-          onChange({ ...item, graduationYear: Number(event.target.value) })
+          onChange({
+            ...item,
+            graduationYear: event.target.value ? Number(event.target.value) : 0,
+          })
         }
       />
       <div className="flex items-center justify-between md:col-span-2">

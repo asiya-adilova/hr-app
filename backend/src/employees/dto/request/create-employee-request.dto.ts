@@ -154,11 +154,13 @@ export class CreateEmployeeDto {
   @ApiProperty({
     example: 'EMP-001',
     description: 'Уникальный табельный номер сотрудника',
-    maxLength: 50,
+    maxLength: 12,
   })
   @IsOptional()
   @IsString()
-  @MaxLength(50)
+  @MaxLength(12, {
+    message: 'Табельный номер не должен превышать 12 символов',
+  })
   employeeNumber?: string;
 
   @ApiPropertyOptional({

@@ -116,7 +116,11 @@ export function SelectMenu({
       return;
     }
 
-    function update() {
+    function update(event?: Event) {
+      if (event?.target && menuRef.current?.contains(event.target as Node)) {
+        return;
+      }
+
       const rect = anchorRef.current?.getBoundingClientRect();
       if (!rect) {
         return;
@@ -143,15 +147,22 @@ export function SelectMenu({
       window.removeEventListener('resize', update);
       window.removeEventListener('scroll', update, true);
     };
-  }, [anchorRef, minWidth, open, placement]);
+  }, [anchorRef, menuRef, minWidth, open, placement]);
 
   useLayoutEffect(() => {
     if (!open) {
       return;
     }
-    menuRef.current
-      ?.querySelector<HTMLElement>('.select-option.is-active')
-      ?.scrollIntoView({ block: 'nearest' });
+
+    const menu = menuRef.current;
+    const active = menu?.querySelector<HTMLElement>('.select-option.is-active');
+    if (!menu || !active) {
+      return;
+    }
+
+    const menuRect = menu.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    menu.scrollTop += activeRect.top - menuRect.top;
   }, [menuRef, open]);
 
   if (!open) {

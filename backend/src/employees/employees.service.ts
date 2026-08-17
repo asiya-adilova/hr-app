@@ -26,7 +26,11 @@ import {
 } from '../common/services/base.service';
 import type { AuthUser } from '../security/strategies/jwt.strategy';
 import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
-import { findBirthDateOrderError } from '../common/helpers/find-birth-date-order-error';
+import {
+  findBirthDateOrderError,
+  findExperienceDatesBeforeBirthError,
+  findGraduationYearBeforeBirthError,
+} from '../common/helpers/find-birth-date-order-error';
 import { findCityCountryMismatch } from '../common/helpers/find-city-country-mismatch';
 
 @Injectable()
@@ -318,14 +322,48 @@ export class EmployeesService extends BaseService<
       return locationError;
     }
 
+    const birthDate = dto.birthDate ?? currentEmployee.birthDate;
     const dateOrderError = findBirthDateOrderError<EmployeeDetailsResponseDto>({
-      birthDate: dto.birthDate ?? currentEmployee.birthDate,
+      birthDate,
       hireDate: dto.hireDate ?? currentEmployee.hireDate,
       passportExpireDate:
         dto.passportExpireDate ?? currentEmployee.passportExpireDate,
     });
     if (dateOrderError) {
       return dateOrderError;
+    }
+
+    if (dto.birthDate) {
+      const educations = await this.prisma.education.findMany({
+        where: { employeeId: id },
+        select: { graduationYear: true },
+      });
+      for (const education of educations) {
+        const yearError =
+          findGraduationYearBeforeBirthError<EmployeeDetailsResponseDto>(
+            education.graduationYear,
+            birthDate,
+          );
+        if (yearError) {
+          return yearError;
+        }
+      }
+
+      const experiences = await this.prisma.workExperience.findMany({
+        where: { employeeId: id },
+        select: { startDate: true, endDate: true },
+      });
+      for (const experience of experiences) {
+        const experienceDateError =
+          findExperienceDatesBeforeBirthError<EmployeeDetailsResponseDto>({
+            birthDate,
+            startDate: experience.startDate,
+            endDate: experience.endDate,
+          });
+        if (experienceDateError) {
+          return experienceDateError;
+        }
+      }
     }
 
     const updated = await super.update(

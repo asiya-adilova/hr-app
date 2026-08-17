@@ -11,6 +11,12 @@ export const BIRTH_DATE_MAX = '2010-12-31';
 export const ADDRESS_MAX_LENGTH = 100;
 export const ADDITIONAL_INFO_MAX_LENGTH = 500;
 export const RESPONSIBILITIES_MAX_LENGTH = 500;
+export const ORGANIZATION_NAME_MAX_LENGTH = 100;
+export const EMPLOYEE_NUMBER_MAX_LENGTH = 12;
+export const INSTITUTION_NAME_MAX_LENGTH = 100;
+export const EDUCATION_SPECIALTY_MAX_LENGTH = 100;
+export const RELATIVE_FULL_NAME_MAX_LENGTH = 100;
+export const RELATIVE_OCCUPATION_MAX_LENGTH = 100;
 
 export function isEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());

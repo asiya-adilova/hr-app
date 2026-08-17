@@ -13,21 +13,25 @@ export class CreateEducationDto {
   @ApiProperty({
     example: 'Ташкентский государственный технический университет',
     description: 'Название учебного заведения',
-    maxLength: 255,
+    maxLength: 100,
   })
   @IsNotEmpty()
   @IsString()
-  @MaxLength(255)
+  @MaxLength(100, {
+    message: 'Название учебного заведения не должно превышать 100 символов',
+  })
   institutionName!: string;
 
   @ApiProperty({
     example: 'Информационные технологии',
     description: 'Специальность',
-    maxLength: 255,
+    maxLength: 100,
   })
   @IsNotEmpty()
   @IsString()
-  @MaxLength(255)
+  @MaxLength(100, {
+    message: 'Специальность не должна превышать 100 символов',
+  })
   specialty!: string;
 
   @ApiProperty({
@@ -56,7 +60,7 @@ export class CreateEducationDto {
 
   @ApiProperty({
     example: 2022,
-    description: 'Год окончания',
+    description: 'Год окончания. Не может быть раньше года рождения сотрудника.',
   })
   @Type(() => Number)
   @IsInt()

@@ -41,20 +41,29 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
 
 let refreshPromise: Promise<boolean> | null = null;
 
+function firstValidationMessage(
+  validationErrors?: string[] | Record<string, string[]>,
+): string | undefined {
+  if (Array.isArray(validationErrors)) {
+    return validationErrors[0];
+  }
+
+  if (validationErrors) {
+    return Object.values(validationErrors).flat()[0];
+  }
+
+  return undefined;
+}
+
 async function parseResponse<T>(response: Response): Promise<T> {
   const payload = (await response.json()) as ApiResponse<T> | undefined;
 
-  if (!response.ok) {
+  if (!response.ok || payload?.successful === false) {
     throw new ApiError(
-      payload?.error?.message ?? 'Ошибка запроса',
+      firstValidationMessage(payload?.error?.validationErrors) ??
+        payload?.error?.message ??
+        'Ошибка запроса',
       payload?.error?.code,
-    );
-  }
-
-  if (payload && payload.successful === false) {
-    throw new ApiError(
-      payload.error?.message ?? 'Ошибка запроса',
-      payload.error?.code,
     );
   }
 

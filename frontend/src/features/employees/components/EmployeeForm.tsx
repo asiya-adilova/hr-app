@@ -11,6 +11,7 @@ import {
   ADDRESS_MAX_LENGTH,
   BIRTH_DATE_MAX,
   digitsOnly,
+  EMPLOYEE_NUMBER_MAX_LENGTH,
   isBirthDateAllowed,
   isPassportNumber,
   isPassportSeries,
@@ -21,6 +22,7 @@ import {
   RESPONSIBILITIES_MAX_LENGTH,
   todayIsoDate,
 } from '../../../utils/validation.ts';
+import { yearFromIsoDate } from '../../../utils/date.ts';
 import { useReferences } from '../../references/hooks/useReferences.ts';
 import { employeeApi } from '../api/employee.api.ts';
 import type {
@@ -325,6 +327,7 @@ function addExperienceFieldErrors(
   item: ExperienceCardItem,
   index: number,
   nextErrors: Record<string, string>,
+  birthDate?: string,
 ) {
   if (!item.companyName.trim()) {
     nextErrors[`experience-${index}-company`] = 'Обязательно';
@@ -342,9 +345,15 @@ function addExperienceFieldErrors(
     nextErrors[`experience-${index}-start`] = 'Обязательно';
   } else if (item.startDate > todayIsoDate()) {
     nextErrors[`experience-${index}-start`] = 'Дата начала не может быть в будущем';
+  } else if (birthDate && item.startDate < birthDate) {
+    nextErrors[`experience-${index}-start`] =
+      'Дата начала не может быть раньше даты рождения';
   }
   if (!item.isCurrent && !item.endDate) {
     nextErrors[`experience-${index}-end`] = 'Обязательно';
+  } else if (birthDate && !item.isCurrent && item.endDate && item.endDate < birthDate) {
+    nextErrors[`experience-${index}-end`] =
+      'Дата окончания не может быть раньше даты рождения';
   } else if (
     item.startDate &&
     !item.isCurrent &&
@@ -399,6 +408,7 @@ function addEducationFieldErrors(
   item: EducationCardItem,
   index: number,
   nextErrors: Record<string, string>,
+  birthDate?: string,
 ) {
   if (!item.institutionName.trim()) {
     nextErrors[`education-${index}-institution`] = 'Обязательно';
@@ -417,6 +427,12 @@ function addEducationFieldErrors(
   }
   if (!item.graduationYear) {
     nextErrors[`education-${index}-year`] = 'Обязательно';
+  } else {
+    const birthYear = yearFromIsoDate(birthDate);
+    if (birthYear && item.graduationYear < birthYear) {
+      nextErrors[`education-${index}-year`] =
+        'Год окончания не может быть раньше года рождения';
+    }
   }
 }
 
@@ -795,7 +811,7 @@ export function EmployeeForm({
     const item = values.workExperiences[index];
     const employeeId = initial?.id;
     const nextErrors: Record<string, string> = {};
-    addExperienceFieldErrors(item, index, nextErrors);
+    addExperienceFieldErrors(item, index, nextErrors, values.birthDate);
     addExperienceOverlapErrors(values.workExperiences, nextErrors);
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0 || !employeeId) {
@@ -825,7 +841,7 @@ export function EmployeeForm({
     const item = values.educations[index];
     const employeeId = initial?.id;
     const nextErrors: Record<string, string> = {};
-    addEducationFieldErrors(item, index, nextErrors);
+    addEducationFieldErrors(item, index, nextErrors, values.birthDate);
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0 || !employeeId) {
       if (!employeeId) {
@@ -1007,7 +1023,7 @@ export function EmployeeForm({
     if (current === 2) {
       values.workExperiences.forEach((item, index) => {
         if (!item.view) {
-          addExperienceFieldErrors(item, index, nextErrors);
+          addExperienceFieldErrors(item, index, nextErrors, values.birthDate);
         }
       });
       addExperienceOverlapErrors(values.workExperiences, nextErrors);
@@ -1016,7 +1032,7 @@ export function EmployeeForm({
     if (current === 3) {
       values.educations.forEach((item, index) => {
         if (!item.view) {
-          addEducationFieldErrors(item, index, nextErrors);
+          addEducationFieldErrors(item, index, nextErrors, values.birthDate);
         }
       });
     }
@@ -1329,10 +1345,14 @@ export function EmployeeForm({
           <Input
             label="Табельный номер"
             autoCapitalize="characters"
+            maxLength={EMPLOYEE_NUMBER_MAX_LENGTH}
             value={values.employeeNumber}
             error={fieldErrors.employeeNumber}
             onChange={(event) =>
-              setField('employeeNumber', event.target.value.toUpperCase())
+              setField(
+                'employeeNumber',
+                event.target.value.toUpperCase().slice(0, EMPLOYEE_NUMBER_MAX_LENGTH),
+              )
             }
           />
           <DateField
@@ -1382,6 +1402,7 @@ export function EmployeeForm({
               countries={options.countries}
               cities={refs.cities}
               errors={fieldErrors}
+              minYear={yearFromIsoDate(values.birthDate)}
               saving={savingKey === item.key}
               onChange={(next) => patchEducation(index, next)}
               onSave={() => void saveEducation(index)}
@@ -1416,6 +1437,7 @@ export function EmployeeForm({
               countries={options.countries}
               cities={refs.cities}
               errors={fieldErrors}
+              minDate={values.birthDate || undefined}
               saving={savingKey === item.key}
               onChange={(next) => patchExperience(index, next)}
               onSave={() => void saveExperience(index)}
