@@ -93,43 +93,43 @@ frontend/src/
 
 Login:
 
-![Login](docs/screenshots/login.png)
+![Login](https://cdn.jsdelivr.net/gh/asiya-adilova/hr-app@main/docs/screenshots/login.png)
 
 Registration:
 
-![Registration](docs/screenshots/register.png)
+![Registration](https://cdn.jsdelivr.net/gh/asiya-adilova/hr-app@main/docs/screenshots/register.png)
 
 Employee cabinet, step 1 (personal and passport data):
 
-![Employee form contacts](docs/screenshots/employee-form-contacts.png)
+![Employee form contacts](https://cdn.jsdelivr.net/gh/asiya-adilova/hr-app@main/docs/screenshots/employee-form-contacts.png)
 
 Employee cabinet, step 3 (work experience):
 
-![Employee form work experience](docs/screenshots/employee-form-experience.png)
+![Employee form work experience](https://cdn.jsdelivr.net/gh/asiya-adilova/hr-app@main/docs/screenshots/employee-form-experience.png)
 
 Employee cabinet, profile view:
 
-![Employee profile](docs/screenshots/employee-profile.png)
+![Employee profile](https://cdn.jsdelivr.net/gh/asiya-adilova/hr-app@main/docs/screenshots/employee-profile.png)
 
 Employee cabinet, profile view (work, education, relatives):
 
-![Employee profile more](docs/screenshots/employee-profile-more.png)
+![Employee profile more](https://cdn.jsdelivr.net/gh/asiya-adilova/hr-app@main/docs/screenshots/employee-profile-more.png)
 
 Admin panel, home:
 
-![Admin home](docs/screenshots/admin-home.png)
+![Admin home](https://cdn.jsdelivr.net/gh/asiya-adilova/hr-app@main/docs/screenshots/admin-home.png)
 
 Admin panel, employees table with filters:
 
-![Admin employees](docs/screenshots/admin-employees.png)
+![Admin employees](https://cdn.jsdelivr.net/gh/asiya-adilova/hr-app@main/docs/screenshots/admin-employees.png)
 
 Admin panel, reference tables:
 
-![Admin references](docs/screenshots/admin-references.png)
+![Admin references](https://cdn.jsdelivr.net/gh/asiya-adilova/hr-app@main/docs/screenshots/admin-references.png)
 
 Admin panel, cities reference table:
 
-![Admin cities](docs/screenshots/admin-references-cities.png)
+![Admin cities](https://cdn.jsdelivr.net/gh/asiya-adilova/hr-app@main/docs/screenshots/admin-references-cities.png)
 
 ## How to run
 
