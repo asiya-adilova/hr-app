@@ -21,6 +21,12 @@ export class EmployeeTableResponseDto {
   })
   fullName!: string;
 
+  @ApiProperty({
+    example: '31234567890123',
+    description: 'ПИНФЛ',
+  })
+  pinfl!: string;
+
   @ApiPropertyOptional({
     example: 'Информационные технологии',
   })

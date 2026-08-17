@@ -6,14 +6,21 @@ import type { EmployeeTableItem } from '../types/employee.ts';
 
 type EmployeeTableProps = {
   rows: EmployeeTableItem[];
+  startNumber: number;
   onView: (id: number) => void;
   onDelete: (row: EmployeeTableItem) => void;
 };
 
-export function EmployeeTable({ rows, onView, onDelete }: EmployeeTableProps) {
+export function EmployeeTable({
+  rows,
+  startNumber,
+  onView,
+  onDelete,
+}: EmployeeTableProps) {
   return (
     <Table
       rows={rows}
+      startNumber={startNumber}
       empty="Сотрудники не найдены"
       columns={[
         {
@@ -25,6 +32,11 @@ export function EmployeeTable({ rows, onView, onDelete }: EmployeeTableProps) {
           key: 'name',
           header: 'ФИО',
           render: (row) => row.fullName,
+        },
+        {
+          key: 'pinfl',
+          header: 'ПИНФЛ',
+          render: (row) => row.pinfl || '—',
         },
         {
           key: 'department',

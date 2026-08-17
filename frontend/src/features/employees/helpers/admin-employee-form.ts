@@ -1,4 +1,6 @@
 import {
+  ADDITIONAL_INFO_MAX_LENGTH,
+  ADDRESS_MAX_LENGTH,
   BIRTH_DATE_MAX,
   isBirthDateAllowed,
   isPassportNumber,
@@ -6,6 +8,7 @@ import {
   isPinfl,
   isValidPhone,
   required,
+  RESPONSIBILITIES_MAX_LENGTH,
   todayIsoDate,
 } from '../../../utils/validation.ts';
 import type { CreateEmployeePayload, EmployeeDetails } from '../types/employee.ts';
@@ -182,6 +185,9 @@ export function collectPersonalErrors(values: AdminFormValues) {
   }
   if (!required(values.passportExpireDate)) {
     nextErrors.passportExpireDate = 'Обязательно';
+  } else if (values.birthDate && values.passportExpireDate < values.birthDate) {
+    nextErrors.passportExpireDate =
+      'Срок действия паспорта не может быть раньше даты рождения';
   }
   if (!required(values.passportIssuedBy)) nextErrors.passportIssuedBy = 'Обязательно';
   if (!required(values.phone)) {
@@ -191,7 +197,11 @@ export function collectPersonalErrors(values: AdminFormValues) {
   }
   if (!required(values.countryId)) nextErrors.countryId = 'Обязательно';
   if (!required(values.cityId)) nextErrors.cityId = 'Обязательно';
-  if (!required(values.address)) nextErrors.address = 'Обязательно';
+  if (!required(values.address)) {
+    nextErrors.address = 'Обязательно';
+  } else if (values.address.length > ADDRESS_MAX_LENGTH) {
+    nextErrors.address = `Максимум ${ADDRESS_MAX_LENGTH} символов`;
+  }
   if (!required(values.genderId)) nextErrors.genderId = 'Обязательно';
   if (!required(values.citizenshipId)) nextErrors.citizenshipId = 'Обязательно';
   if (!required(values.nationalityId)) nextErrors.nationalityId = 'Обязательно';
@@ -202,7 +212,11 @@ export function collectPersonalErrors(values: AdminFormValues) {
 export function collectJobErrors(values: AdminFormValues) {
   const nextErrors: Record<string, string> = {};
   if (!required(values.employeeNumber)) nextErrors.employeeNumber = 'Обязательно';
-  if (!required(values.hireDate)) nextErrors.hireDate = 'Обязательно';
+  if (!required(values.hireDate)) {
+    nextErrors.hireDate = 'Обязательно';
+  } else if (values.birthDate && values.hireDate < values.birthDate) {
+    nextErrors.hireDate = 'Дата приёма не может быть раньше даты рождения';
+  }
   if (!required(values.departmentId)) nextErrors.departmentId = 'Обязательно';
   if (!required(values.positionId)) nextErrors.positionId = 'Обязательно';
   if (!required(values.employmentTypeId)) nextErrors.employmentTypeId = 'Обязательно';
@@ -210,6 +224,9 @@ export function collectJobErrors(values: AdminFormValues) {
   if (!required(values.hasDriverLicense)) nextErrors.hasDriverLicense = 'Обязательно';
   if (values.hasDriverLicense === 'true' && !required(values.driverLicenseCategoryId)) {
     nextErrors.driverLicenseCategoryId = 'Обязательно';
+  }
+  if (values.additionalInfo.length > ADDITIONAL_INFO_MAX_LENGTH) {
+    nextErrors.additionalInfo = `Максимум ${ADDITIONAL_INFO_MAX_LENGTH} символов`;
   }
   return nextErrors;
 }
@@ -308,6 +325,9 @@ export function addExperienceFieldErrors(
   }
   if (!item.responsibilities?.trim()) {
     nextErrors[`experience-${index}-responsibilities`] = 'Обязательно';
+  } else if (item.responsibilities.length > RESPONSIBILITIES_MAX_LENGTH) {
+    nextErrors[`experience-${index}-responsibilities`] =
+      `Максимум ${RESPONSIBILITIES_MAX_LENGTH} символов`;
   }
 }
 

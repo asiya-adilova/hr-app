@@ -15,6 +15,7 @@ import {
   MinLength,
 } from 'class-validator';
 import {
+  IsDateOnOrAfterField,
   IsDateOnOrAfterToday,
   IsDateOnOrBefore,
 } from '../../../common/validators/date.validators';
@@ -85,13 +86,17 @@ export class CreateEmployeeDto {
 
   @ApiProperty({
     example: '2030-06-15',
-    description: 'Дата окончания срока действия паспорта',
+    description:
+      'Дата окончания срока действия паспорта. Не может быть раньше даты рождения.',
     type: String,
     format: 'date',
   })
   @IsDateString()
   @IsDateOnOrAfterToday({
     message: 'Укажите действительный паспорт',
+  })
+  @IsDateOnOrAfterField('birthDate', {
+    message: 'Срок действия паспорта не может быть раньше даты рождения',
   })
   passportExpireDate!: string;
 
@@ -119,13 +124,15 @@ export class CreateEmployeeDto {
   phone!: string;
 
   @ApiProperty({
-    example: 'г. Ташкент, Мирзо-Улугбекский район, ул. Навои, дом 10',
+    example: 'г. Ташкент, ул. Навои, дом 10',
     description: 'Адрес проживания сотрудника',
-    maxLength: 500,
+    maxLength: 100,
   })
   @IsNotEmpty()
   @IsString()
-  @MaxLength(500)
+  @MaxLength(100, {
+    message: 'Адрес не должен превышать 100 символов',
+  })
   address!: string;
 
   @ApiProperty({
@@ -156,12 +163,15 @@ export class CreateEmployeeDto {
 
   @ApiPropertyOptional({
     example: '2026-01-15',
-    description: 'Дата приема на работу',
+    description: 'Дата приема на работу. Не может быть раньше даты рождения.',
     type: String,
     format: 'date',
   })
   @IsOptional()
   @IsDateString()
+  @IsDateOnOrAfterField('birthDate', {
+    message: 'Дата приёма не может быть раньше даты рождения',
+  })
   hireDate?: string;
 
   @ApiProperty({
@@ -257,10 +267,12 @@ export class CreateEmployeeDto {
   @ApiPropertyOptional({
     example: 'Дополнительная информация о сотруднике',
     description: 'Дополнительная информация',
-    maxLength: 2000,
+    maxLength: 500,
   })
   @IsOptional()
   @IsString()
-  @MaxLength(2000)
+  @MaxLength(500, {
+    message: 'Дополнительная информация не должна превышать 500 символов',
+  })
   additionalInfo?: string;
 }

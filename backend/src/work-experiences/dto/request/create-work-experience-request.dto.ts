@@ -81,10 +81,12 @@ export class CreateWorkExperienceDto {
   @ApiProperty({
     example: 'Разработка корпоративных информационных систем',
     description: 'Обязанности',
-    maxLength: 2000,
+    maxLength: 500,
   })
   @IsNotEmpty()
   @IsString()
-  @MaxLength(2000)
+  @MaxLength(500, {
+    message: 'Обязанности не должны превышать 500 символов',
+  })
   responsibilities!: string;
 }

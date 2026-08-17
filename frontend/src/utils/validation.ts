@@ -8,6 +8,10 @@ export const PASSWORD_HINT =
 
 export const BIRTH_DATE_MAX = '2010-12-31';
 
+export const ADDRESS_MAX_LENGTH = 100;
+export const ADDITIONAL_INFO_MAX_LENGTH = 500;
+export const RESPONSIBILITIES_MAX_LENGTH = 500;
+
 export function isEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }

@@ -19,6 +19,8 @@ type SelectChangeEvent = {
   target: { value: string; name?: string };
 };
 
+type SelectPlacement = 'up' | 'down';
+
 type SelectProps = {
   label?: string;
   error?: string;
@@ -28,6 +30,7 @@ type SelectProps = {
   name?: string;
   disabled?: boolean;
   className?: string;
+  placement?: SelectPlacement;
   onChange?: (event: SelectChangeEvent) => void;
 };
 
@@ -95,6 +98,7 @@ export function SelectMenu({
   menuRef,
   id,
   minWidth = 0,
+  placement = 'down',
   children,
 }: {
   open: boolean;
@@ -102,6 +106,7 @@ export function SelectMenu({
   menuRef: RefObject<HTMLDivElement | null>;
   id?: string;
   minWidth?: number;
+  placement?: SelectPlacement;
   children: ReactNode;
 }) {
   const [style, setStyle] = useState<CSSProperties>({});
@@ -119,8 +124,13 @@ export function SelectMenu({
 
       const width = Math.max(rect.width, minWidth);
       const left = Math.min(rect.left, window.innerWidth - width - 8);
+      const position =
+        placement === 'up'
+          ? { top: 'auto', bottom: window.innerHeight - rect.top + 4 }
+          : { top: rect.bottom + 4, bottom: 'auto' };
+
       setStyle({
-        top: rect.bottom + 4,
+        ...position,
         left: Math.max(8, left),
         width,
       });
@@ -133,7 +143,7 @@ export function SelectMenu({
       window.removeEventListener('resize', update);
       window.removeEventListener('scroll', update, true);
     };
-  }, [anchorRef, minWidth, open]);
+  }, [anchorRef, minWidth, open, placement]);
 
   useLayoutEffect(() => {
     if (!open) {
@@ -187,6 +197,7 @@ export function Select({
   value,
   name,
   disabled,
+  placement,
   onChange,
 }: SelectProps) {
   const { open, setOpen, rootRef, menuRef } = useSelectMenu();
@@ -227,7 +238,13 @@ export function Select({
           className={`absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transition ${open ? 'rotate-180' : ''}`}
         />
       </button>
-      <SelectMenu open={open} anchorRef={triggerRef} menuRef={menuRef} id={listId}>
+      <SelectMenu
+        open={open}
+        anchorRef={triggerRef}
+        menuRef={menuRef}
+        id={listId}
+        placement={placement}
+      >
         {placeholder ? (
           <SelectOption active={!stringValue} onClick={() => pick('')}>
             {placeholder}

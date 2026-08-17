@@ -66,6 +66,7 @@ const emptyPaging: PageInfo = {
 export function useEmployeeList(
   filter: EmployeeFilter,
   pageIndex: number,
+  pageSize: number,
   refreshToken = 0,
 ) {
   const [rows, setRows] = useState<EmployeeTableItem[]>([]);
@@ -77,7 +78,7 @@ export function useEmployeeList(
     let active = true;
 
     employeeApi
-      .filter(compactEmployeeFilter(filter), pageIndex, 10)
+      .filter(compactEmployeeFilter(filter), pageIndex, pageSize)
       .then((result) => {
         if (!active) {
           return;
@@ -99,7 +100,7 @@ export function useEmployeeList(
     return () => {
       active = false;
     };
-  }, [filter, pageIndex, refreshToken]);
+  }, [filter, pageIndex, pageSize, refreshToken]);
 
   return { rows, paging, loading, error };
 }

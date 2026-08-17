@@ -6,6 +6,8 @@ import { PhoneField } from '../../../components/ui/PhoneField.tsx';
 import { Select } from '../../../components/ui/Select.tsx';
 import { ApiError } from '../../../services/api-client.ts';
 import {
+  ADDITIONAL_INFO_MAX_LENGTH,
+  ADDRESS_MAX_LENGTH,
   BIRTH_DATE_MAX,
   digitsOnly,
   lettersOnly,
@@ -437,6 +439,7 @@ export function EmployeeAdminEditor({
                   />
                   <DateField
                     label="Срок действия паспорта"
+                    min={values.birthDate || undefined}
                     value={values.passportExpireDate}
                     error={fieldErrors.passportExpireDate}
                     invalidIfPast
@@ -467,6 +470,8 @@ export function EmployeeAdminEditor({
                   />
                   <Input
                     label="Адрес"
+                    maxLength={ADDRESS_MAX_LENGTH}
+                    showCount
                     value={values.address}
                     error={fieldErrors.address}
                     onChange={(event) => setField('address', event.target.value)}
@@ -522,6 +527,7 @@ export function EmployeeAdminEditor({
                   />
                   <DateField
                     label="Дата приёма"
+                    min={values.birthDate || undefined}
                     value={values.hireDate}
                     error={fieldErrors.hireDate}
                     onChange={(value) => setField('hireDate', value)}
@@ -582,7 +588,10 @@ export function EmployeeAdminEditor({
                   <div className="md:col-span-2">
                     <Input
                       label="Дополнительно"
+                      maxLength={ADDITIONAL_INFO_MAX_LENGTH}
+                      showCount
                       value={values.additionalInfo}
+                      error={fieldErrors.additionalInfo}
                       onChange={(event) => setField('additionalInfo', event.target.value)}
                     />
                   </div>

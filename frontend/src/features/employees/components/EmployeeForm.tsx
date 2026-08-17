@@ -7,6 +7,8 @@ import { Select } from '../../../components/ui/Select.tsx';
 import { Stepper } from '../../../components/ui/Stepper.tsx';
 import { ApiError } from '../../../services/api-client.ts';
 import {
+  ADDITIONAL_INFO_MAX_LENGTH,
+  ADDRESS_MAX_LENGTH,
   BIRTH_DATE_MAX,
   digitsOnly,
   isBirthDateAllowed,
@@ -16,6 +18,7 @@ import {
   isValidPhone,
   lettersOnly,
   required,
+  RESPONSIBILITIES_MAX_LENGTH,
   todayIsoDate,
 } from '../../../utils/validation.ts';
 import { useReferences } from '../../references/hooks/useReferences.ts';
@@ -353,6 +356,9 @@ function addExperienceFieldErrors(
   }
   if (!item.responsibilities?.trim()) {
     nextErrors[`experience-${index}-responsibilities`] = 'Обязательно';
+  } else if (item.responsibilities.length > RESPONSIBILITIES_MAX_LENGTH) {
+    nextErrors[`experience-${index}-responsibilities`] =
+      `Максимум ${RESPONSIBILITIES_MAX_LENGTH} символов`;
   }
 }
 
@@ -960,6 +966,12 @@ export function EmployeeForm({
       }
       if (!required(values.passportExpireDate)) {
         nextErrors.passportExpireDate = 'Обязательно';
+      } else if (
+        values.birthDate &&
+        values.passportExpireDate < values.birthDate
+      ) {
+        nextErrors.passportExpireDate =
+          'Срок действия паспорта не может быть раньше даты рождения';
       }
       if (!required(values.passportIssuedBy)) nextErrors.passportIssuedBy = 'Обязательно';
       if (!required(values.phone)) {
@@ -969,7 +981,11 @@ export function EmployeeForm({
       }
       if (!required(values.countryId)) nextErrors.countryId = 'Обязательно';
       if (!required(values.cityId)) nextErrors.cityId = 'Обязательно';
-      if (!required(values.address)) nextErrors.address = 'Обязательно';
+      if (!required(values.address)) {
+        nextErrors.address = 'Обязательно';
+      } else if (values.address.length > ADDRESS_MAX_LENGTH) {
+        nextErrors.address = `Максимум ${ADDRESS_MAX_LENGTH} символов`;
+      }
       if (!required(values.genderId)) nextErrors.genderId = 'Обязательно';
       if (!required(values.citizenshipId)) nextErrors.citizenshipId = 'Обязательно';
       if (!required(values.nationalityId)) nextErrors.nationalityId = 'Обязательно';
@@ -978,7 +994,11 @@ export function EmployeeForm({
 
     if (current === 1) {
       if (!required(values.employeeNumber)) nextErrors.employeeNumber = 'Обязательно';
-      if (!required(values.hireDate)) nextErrors.hireDate = 'Обязательно';
+      if (!required(values.hireDate)) {
+        nextErrors.hireDate = 'Обязательно';
+      } else if (values.birthDate && values.hireDate < values.birthDate) {
+        nextErrors.hireDate = 'Дата приёма не может быть раньше даты рождения';
+      }
       if (!required(values.departmentId)) nextErrors.departmentId = 'Обязательно';
       if (!required(values.positionId)) nextErrors.positionId = 'Обязательно';
       if (!required(values.employmentTypeId)) nextErrors.employmentTypeId = 'Обязательно';
@@ -1006,6 +1026,9 @@ export function EmployeeForm({
       if (!required(values.hasDriverLicense)) nextErrors.hasDriverLicense = 'Обязательно';
       if (values.hasDriverLicense === 'true' && !required(values.driverLicenseCategoryId)) {
         nextErrors.driverLicenseCategoryId = 'Обязательно';
+      }
+      if (values.additionalInfo.length > ADDITIONAL_INFO_MAX_LENGTH) {
+        nextErrors.additionalInfo = `Максимум ${ADDITIONAL_INFO_MAX_LENGTH} символов`;
       }
       values.relatives.forEach((item, index) => {
         if (!item.view) {
@@ -1230,6 +1253,7 @@ export function EmployeeForm({
           />
           <DateField
             label="Срок действия паспорта"
+            min={values.birthDate || undefined}
             value={values.passportExpireDate}
             error={fieldErrors.passportExpireDate}
             invalidIfPast
@@ -1263,6 +1287,8 @@ export function EmployeeForm({
           />
           <Input
             label="Адрес"
+            maxLength={ADDRESS_MAX_LENGTH}
+            showCount
             value={values.address}
             error={fieldErrors.address}
             onChange={(event) => setField('address', event.target.value)}
@@ -1311,6 +1337,7 @@ export function EmployeeForm({
           />
           <DateField
             label="Дата приёма"
+            min={values.birthDate || undefined}
             value={values.hireDate}
             error={fieldErrors.hireDate}
             onChange={(value) => setField('hireDate', value)}
@@ -1447,7 +1474,10 @@ export function EmployeeForm({
             <div className="md:col-span-2">
               <Input
                 label="Дополнительно"
+                maxLength={ADDITIONAL_INFO_MAX_LENGTH}
+                showCount
                 value={values.additionalInfo}
+                error={fieldErrors.additionalInfo}
                 onChange={(event) => setField('additionalInfo', event.target.value)}
               />
             </div>

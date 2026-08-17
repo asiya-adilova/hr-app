@@ -16,45 +16,7 @@ export const referencesApi = {
     return getList<CityItem>('/cities', search);
   },
 
-  async getAll(): Promise<ReferenceMap> {
-    const [
-      genders,
-      citizenships,
-      nationalities,
-      departments,
-      positions,
-      employmentTypes,
-      educationLevels,
-      maritalStatuses,
-      driverLicenseCategories,
-      countries,
-      cities,
-    ] = await Promise.all([
-      getList('/genders'),
-      getList('/citizenships'),
-      getList('/nationalities'),
-      getList('/departments'),
-      getList('/positions'),
-      getList('/employment-types'),
-      getList('/education-levels'),
-      getList('/marital-statuses'),
-      getList('/driver-license-categories'),
-      getList('/countries'),
-      getList<CityItem>('/cities'),
-    ]);
-
-    return {
-      genders,
-      citizenships,
-      nationalities,
-      departments,
-      positions,
-      employmentTypes,
-      educationLevels,
-      maritalStatuses,
-      driverLicenseCategories,
-      countries,
-      cities,
-    };
+  getAll() {
+    return apiRequest<ReferenceMap>('/references');
   },
 };

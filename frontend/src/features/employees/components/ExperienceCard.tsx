@@ -4,7 +4,10 @@ import { DateField } from '../../../components/ui/DateField.tsx';
 import { Input } from '../../../components/ui/Input.tsx';
 import { Select } from '../../../components/ui/Select.tsx';
 import { formatDate } from '../../../utils/date.ts';
-import { todayIsoDate } from '../../../utils/validation.ts';
+import {
+  RESPONSIBILITIES_MAX_LENGTH,
+  todayIsoDate,
+} from '../../../utils/validation.ts';
 import type { CityItem } from '../../references/types/references.ts';
 import { CountryCityFields, formatLocation } from './CountryCityFields.tsx';
 import {
@@ -169,6 +172,8 @@ export function ExperienceCard({
       <div className="md:col-span-2">
         <Input
           label="Обязанности"
+          maxLength={RESPONSIBILITIES_MAX_LENGTH}
+          showCount
           value={item.responsibilities}
           error={errors[`experience-${index}-responsibilities`]}
           onChange={(event) =>

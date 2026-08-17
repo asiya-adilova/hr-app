@@ -21,9 +21,11 @@ import { CountriesController } from './countries/countries.controller';
 import { CountriesService } from './countries/countries.service';
 import { CitiesController } from './cities/cities.controller';
 import { CitiesService } from './cities/cities.service';
+import { ReferencesController } from './references.controller';
 
 @Module({
   controllers: [
+    ReferencesController,
     GendersController,
     CitizenshipsController,
     NationalitiesController,

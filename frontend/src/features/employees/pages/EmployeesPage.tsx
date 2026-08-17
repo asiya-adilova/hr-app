@@ -4,6 +4,7 @@ import { Input } from '../../../components/ui/Input.tsx';
 import { Modal } from '../../../components/ui/Modal.tsx';
 import { Pagination } from '../../../components/ui/Pagination.tsx';
 import { Select } from '../../../components/ui/Select.tsx';
+import { DEFAULT_PAGE_SIZE } from '../../../constants/pagination.ts';
 import { ApiError } from '../../../services/api-client.ts';
 import { useReferences } from '../../references/hooks/useReferences.ts';
 import { employeeApi } from '../api/employee.api.ts';
@@ -24,6 +25,7 @@ export function EmployeesPage() {
     sortBy: EmployeeFilterSort.Newest,
   });
   const [pageIndex, setPageIndex] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [refreshToken, setRefreshToken] = useState(0);
   const [drawerId, setDrawerId] = useState<number | null>(null);
   const lastDrawerId = useRef(drawerId);
@@ -37,11 +39,17 @@ export function EmployeesPage() {
   const { rows, paging, loading, error } = useEmployeeList(
     filter,
     pageIndex,
+    pageSize,
     refreshToken,
   );
 
   function updateFilter(next: EmployeeFilter) {
     setFilter(next);
+    setPageIndex(1);
+  }
+
+  function updatePageSize(next: number) {
+    setPageSize(next);
     setPageIndex(1);
   }
 
@@ -134,6 +142,7 @@ export function EmployeesPage() {
         ) : (
           <EmployeeTable
             rows={rows}
+            startNumber={(pageIndex - 1) * pageSize + 1}
             onView={(id) => setDrawerId(id)}
             onDelete={(row) => {
               setDeleteError(null);
@@ -143,9 +152,11 @@ export function EmployeesPage() {
         )}
         <Pagination
           pageIndex={paging.pageIndex}
+          pageSize={pageSize}
           totalPages={paging.totalPages}
           totalCount={paging.totalCount}
           onChange={setPageIndex}
+          onPageSizeChange={updatePageSize}
         />
       </div>
 

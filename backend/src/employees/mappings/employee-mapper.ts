@@ -193,6 +193,7 @@ export class EmployeeMapper {
       accountId: employee.accountId,
       employeeNumber: employee.employeeNumber,
       fullName: EmployeeMapper.toFullName(employee.account),
+      pinfl: employee.pinfl,
       departmentName: employee.department?.name ?? '—',
       positionName: employee.position?.name ?? '—',
       cityName: employee.city?.name ?? undefined,

@@ -20,9 +20,12 @@ export function useReferences() {
   const [data, setData] = useState<ReferenceMap>(empty);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setError(null);
 
     referencesApi
       .getAll()
@@ -47,7 +50,11 @@ export function useReferences() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [reloadToken]);
 
-  return { data, loading, error };
+  function reload() {
+    setReloadToken((token) => token + 1);
+  }
+
+  return { data, loading, error, reload };
 }

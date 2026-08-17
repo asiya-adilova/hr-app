@@ -26,6 +26,7 @@ import {
 } from '../common/services/base.service';
 import type { AuthUser } from '../security/strategies/jwt.strategy';
 import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
+import { findBirthDateOrderError } from '../common/helpers/find-birth-date-order-error';
 import { findCityCountryMismatch } from '../common/helpers/find-city-country-mismatch';
 
 @Injectable()
@@ -244,6 +245,15 @@ export class EmployeesService extends BaseService<
       return locationError;
     }
 
+    const dateOrderError = findBirthDateOrderError<EmployeeDetailsResponseDto>({
+      birthDate: dto.birthDate,
+      hireDate: dto.hireDate,
+      passportExpireDate: dto.passportExpireDate,
+    });
+    if (dateOrderError) {
+      return dateOrderError;
+    }
+
     return super.create(dto);
   }
 
@@ -306,6 +316,16 @@ export class EmployeesService extends BaseService<
       );
     if (locationError) {
       return locationError;
+    }
+
+    const dateOrderError = findBirthDateOrderError<EmployeeDetailsResponseDto>({
+      birthDate: dto.birthDate ?? currentEmployee.birthDate,
+      hireDate: dto.hireDate ?? currentEmployee.hireDate,
+      passportExpireDate:
+        dto.passportExpireDate ?? currentEmployee.passportExpireDate,
+    });
+    if (dateOrderError) {
+      return dateOrderError;
     }
 
     const updated = await super.update(

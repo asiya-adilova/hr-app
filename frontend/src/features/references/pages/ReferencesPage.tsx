@@ -4,7 +4,7 @@ import { useReferences } from '../hooks/useReferences.ts';
 import { referenceCatalog } from '../types/reference-catalog.ts';
 
 export function ReferencesPage() {
-  const { data, loading, error } = useReferences();
+  const { data, loading, error, reload } = useReferences();
 
   return (
     <div className="space-y-6">
@@ -16,7 +16,14 @@ export function ReferencesPage() {
         </p>
       </div>
 
-      {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-rose-600">
+          {error}{' '}
+          <button type="button" className="underline" onClick={reload}>
+            Повторить
+          </button>
+        </p>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {referenceCatalog.map((item) => (

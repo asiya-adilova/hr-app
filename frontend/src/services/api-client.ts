@@ -68,7 +68,7 @@ async function tryRefresh(): Promise<boolean> {
   }
 
   try {
-    const response = await fetch(`${API_URL}/security/refresh`, {
+    const response = await fetchWithRetry(`${API_URL}/security/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
@@ -85,6 +85,37 @@ async function tryRefresh(): Promise<boolean> {
   }
 }
 
+function isNetworkError(error: unknown): boolean {
+  return error instanceof TypeError;
+}
+
+function toNetworkError(error: unknown): ApiError {
+  const message =
+    error instanceof Error && error.message && error.message !== 'Failed to fetch'
+      ? error.message
+      : 'Не удалось подключиться к серверу';
+  return new ApiError(message);
+}
+
+async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+  const delays = [400, 1000];
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= delays.length; attempt += 1) {
+    try {
+      return await fetch(url, init);
+    } catch (error) {
+      lastError = error;
+      if (!isNetworkError(error) || attempt === delays.length) {
+        throw toNetworkError(error);
+      }
+      await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+    }
+  }
+
+  throw toNetworkError(lastError);
+}
+
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
@@ -92,7 +123,7 @@ export async function apiRequest<T>(
   const { body, auth = true, skipRefresh = false, headers, ...rest } = options;
   const token = getAccessToken();
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetchWithRetry(`${API_URL}${path}`, {
     ...rest,
     headers: {
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),

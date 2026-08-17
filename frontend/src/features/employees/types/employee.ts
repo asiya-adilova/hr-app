@@ -119,6 +119,7 @@ export type EmployeeTableItem = {
   id: number;
   employeeNumber: string;
   fullName: string;
+  pinfl: string;
   departmentName?: string;
   positionName?: string;
   cityName?: string;
