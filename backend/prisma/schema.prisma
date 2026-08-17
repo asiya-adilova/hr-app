@@ -116,23 +116,23 @@ model Employee {
   pinfl          String @unique
   passportSeries String
   passportNumber String
-  passportIssueDate DateTime
-  passportIssuedBy  String
+  passportExpireDate DateTime
+  passportIssuedBy   String
 
   phone   String
-  email   String?
   address String
 
   // Employment
   employeeNumber String @unique
-  hireDate       DateTime
+  hireDate       DateTime?
+  formStep       Int      @default(0)
 
-  totalExperienceMonths         Int
+  totalExperienceMonths         Int @default(0)
   specialtyExperienceMonths    Int?
 
   // Additional
-  militaryService  Boolean
-  hasDriverLicense Boolean
+  militaryService  Boolean @default(false)
+  hasDriverLicense Boolean @default(false)
   additionalInfo   String?
 
   createdAt DateTime @default(now())
@@ -144,10 +144,10 @@ model Employee {
   genderId                   Int
   citizenshipId              Int
   nationalityId              Int
-  departmentId              Int
-  positionId                 Int
-  employmentTypeId          Int
-  educationLevelId          Int
+  departmentId              Int?
+  positionId                 Int?
+  employmentTypeId          Int?
+  educationLevelId          Int?
   maritalStatusId           Int
   driverLicenseCategoryId   Int?
 
@@ -155,10 +155,10 @@ model Employee {
   gender Gender @relation(fields: [genderId], references: [id])
   citizenship Citizenship @relation(fields: [citizenshipId], references: [id])
   nationality Nationality @relation(fields: [nationalityId], references: [id])
-  department Department @relation(fields: [departmentId], references: [id])
-  position Position @relation(fields: [positionId], references: [id])
-  employmentType EmploymentType @relation(fields: [employmentTypeId], references: [id])
-  educationLevel EducationLevel @relation(fields: [educationLevelId], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id])
+  position Position? @relation(fields: [positionId], references: [id])
+  employmentType EmploymentType? @relation(fields: [employmentTypeId], references: [id])
+  educationLevel EducationLevel? @relation(fields: [educationLevelId], references: [id])
   maritalStatus MaritalStatus @relation(fields: [maritalStatusId], references: [id])
   driverLicenseCategory DriverLicenseCategory? @relation(fields: [driverLicenseCategoryId], references: [id])
 

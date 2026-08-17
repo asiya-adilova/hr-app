@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ReferenceItem } from '../../references/types/references.ts';
 import type { EmployeeFilter } from '../types/employee-filter.ts';
 
@@ -57,6 +58,8 @@ export function EmployeeFilters({
     employmentTypes: ReferenceItem[];
   };
 }) {
+  const [open, setOpen] = useState(false);
+
   function toggle(key: FilterKey, id: number) {
     const current = value[key] ?? [];
     const next = current.includes(id)
@@ -66,8 +69,17 @@ export function EmployeeFilters({
   }
 
   return (
-    <aside className="w-64 shrink-0 space-y-5 rounded-2xl border border-line bg-white p-4">
-      <h2 className="text-sm font-semibold">Фильтры</h2>
+    <aside className="rounded-2xl border border-line bg-white lg:w-64 lg:shrink-0">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold lg:hidden"
+        onClick={() => setOpen((current) => !current)}
+      >
+        Фильтры
+        <span className="text-ink-500">{open ? 'Скрыть' : 'Показать'}</span>
+      </button>
+      <div className={`space-y-5 p-4 ${open ? 'block' : 'hidden'} lg:block`}>
+        <h2 className="hidden text-sm font-semibold lg:block">Фильтры</h2>
       <CheckGroup
         title="Подразделение"
         items={options.departments}
@@ -136,6 +148,7 @@ export function EmployeeFilters({
         />
         Военная служба
       </label>
+      </div>
     </aside>
   );
 }

@@ -41,6 +41,23 @@ export const employeeApi = {
     });
   },
 
+  replaceEducations(employeeId: number, items: Array<Omit<EducationItem, 'id'>>) {
+    return apiRequest<EducationItem[]>(`/employees/${employeeId}/educations`, {
+      method: 'PUT',
+      body: { items },
+    });
+  },
+
+  replaceWorkExperiences(
+    employeeId: number,
+    items: Array<Omit<WorkExperienceItem, 'id'>>,
+  ) {
+    return apiRequest<WorkExperienceItem[]>(
+      `/employees/${employeeId}/work-experiences`,
+      { method: 'PUT', body: { items } },
+    );
+  },
+
   addEducation(employeeId: number, payload: Omit<EducationItem, 'id'>) {
     return apiRequest<EducationItem>(`/employees/${employeeId}/educations`, {
       method: 'POST',

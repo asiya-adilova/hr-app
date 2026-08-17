@@ -32,7 +32,7 @@ export type EmployeeDetails = {
   passport: {
     series: string;
     number: string;
-    issueDate: string;
+    expireDate: string;
     issuedBy: string;
   };
   contact: {
@@ -40,14 +40,15 @@ export type EmployeeDetails = {
     email?: string;
     address: string;
   };
-  hireDate: string;
+  hireDate?: string;
+  formStep?: number;
   gender: EmployeeReference;
   citizenship: EmployeeReference;
   nationality: EmployeeReference;
-  department: EmployeeReference;
-  position: EmployeeReference;
-  employmentType: EmployeeReference;
-  educationLevel: EmployeeReference;
+  department?: EmployeeReference;
+  position?: EmployeeReference;
+  employmentType?: EmployeeReference;
+  educationLevel?: EmployeeReference;
   maritalStatus: EmployeeReference;
   experience: {
     totalMonths: number;
@@ -70,27 +71,27 @@ export type CreateEmployeePayload = {
   pinfl: string;
   passportSeries: string;
   passportNumber: string;
-  passportIssueDate: string;
+  passportExpireDate: string;
   passportIssuedBy: string;
   phone: string;
-  email?: string;
   address: string;
-  employeeNumber: string;
-  hireDate: string;
+  employeeNumber?: string;
+  hireDate?: string;
   genderId: number;
   citizenshipId: number;
   nationalityId: number;
-  departmentId: number;
-  positionId: number;
-  employmentTypeId: number;
-  educationLevelId: number;
+  departmentId?: number;
+  positionId?: number;
+  employmentTypeId?: number;
+  educationLevelId?: number;
   maritalStatusId: number;
   driverLicenseCategoryId?: number;
-  totalExperienceMonths: number;
+  totalExperienceMonths?: number;
   specialtyExperienceMonths?: number;
-  militaryService: boolean;
-  hasDriverLicense: boolean;
+  militaryService?: boolean;
+  hasDriverLicense?: boolean;
   additionalInfo?: string;
+  formStep?: number;
 };
 
 export type EmployeeTableItem = {
@@ -100,8 +101,8 @@ export type EmployeeTableItem = {
   lastName: string;
   middleName?: string;
   fullName: string;
-  departmentName: string;
-  positionName: string;
-  educationLevelName: string;
-  hireDate: string;
+  departmentName?: string;
+  positionName?: string;
+  educationLevelName?: string;
+  hireDate?: string;
 };

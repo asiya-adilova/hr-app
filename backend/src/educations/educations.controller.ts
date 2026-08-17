@@ -11,6 +11,7 @@ import {
 import { ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { EducationsService } from './educations.service';
 import { CreateEducationDto } from './dto/request/create-education-request.dto';
+import { ReplaceEducationsDto } from './dto/request/replace-educations-request.dto';
 import { UpdateEducationDto } from './dto/request/update-education-request.dto';
 import { EducationResponseDto } from './dto/response/education-response.dto';
 import { toApiResponse } from '../common/response/service-result-mapper';
@@ -67,6 +68,25 @@ export class EducationsController {
     @CurrentUser() user: AuthUser,
   ) {
     const result = await this.educationsService.add(employeeId, dto, user);
+
+    return toApiResponse(result);
+  }
+
+  @Put()
+  @ApiOperation({ summary: 'Заменить все записи об образовании сотрудника' })
+  @ApiParam({ name: 'employeeId', type: Number })
+  @ApiBody({ type: ReplaceEducationsDto })
+  @ApiDataResponse(EducationResponseDto, { isArray: true })
+  async replaceAll(
+    @Param('employeeId', ParseIntPipe) employeeId: number,
+    @Body() dto: ReplaceEducationsDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    const result = await this.educationsService.replaceAll(
+      employeeId,
+      dto.items,
+      user,
+    );
 
     return toApiResponse(result);
   }

@@ -44,7 +44,7 @@ export function EmployeeTable({ rows }: { rows: EmployeeTableItem[] }) {
           key: 'actions',
           header: '',
           render: (row) => (
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-wrap justify-end gap-3 whitespace-nowrap">
               <Link
                 to={routes.employeeDetails(row.id)}
                 className="text-sm font-medium text-brand-700"

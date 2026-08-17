@@ -36,25 +36,25 @@ export class EmployeeTableResponseDto {
   })
   fullName!: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'Информационные технологии',
   })
-  departmentName!: string;
+  departmentName?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'Главный специалист',
   })
-  positionName!: string;
+  positionName?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'Высшее',
   })
-  educationLevelName!: string;
+  educationLevelName?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: '2020-03-15',
   })
-  hireDate!: Date;
+  hireDate?: Date;
 
   @ApiProperty({
     example: 96,

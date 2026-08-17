@@ -3,8 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../../components/ui/Button.tsx';
 import { Input } from '../../../components/ui/Input.tsx';
 import { routes } from '../../../constants/routes.ts';
+import { useDebouncedError } from '../../../hooks/useDebouncedError.ts';
 import { ApiError } from '../../../services/api-client.ts';
 import {
+  emailFormatError,
   isEmail,
   PASSWORD_HINT,
   PASSWORD_PATTERN,
@@ -19,13 +21,20 @@ export function RegisterForm() {
   const [middleName, setMiddleName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const emailIdle = useDebouncedError(email, emailFormatError);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!firstName.trim() || !lastName.trim() || !isEmail(email)) {
-      setError('Заполните имя, фамилию и email');
+      if (!isEmail(email)) {
+        setEmailError(email.trim() ? 'Некорректный email' : 'Укажите email');
+      }
+      if (!firstName.trim() || !lastName.trim()) {
+        setError('Заполните имя и фамилию');
+      }
       return;
     }
     if (!PASSWORD_PATTERN.test(password)) {
@@ -35,6 +44,7 @@ export function RegisterForm() {
 
     setSubmitting(true);
     setError(null);
+    setEmailError('');
 
     try {
       await register({
@@ -77,7 +87,12 @@ export function RegisterForm() {
         label="Email"
         type="email"
         value={email}
-        onChange={(event) => setEmail(event.target.value)}
+        error={emailError || emailIdle.error}
+        onChange={(event) => {
+          setEmail(event.target.value);
+          setEmailError('');
+        }}
+        onBlur={emailIdle.showNow}
       />
       <Input
         label="Пароль"

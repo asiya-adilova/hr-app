@@ -11,6 +11,7 @@ import {
 import { ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { WorkExperiencesService } from './work-experiences.service';
 import { CreateWorkExperienceDto } from './dto/request/create-work-experience-request.dto';
+import { ReplaceWorkExperiencesDto } from './dto/request/replace-work-experiences-request.dto';
 import { UpdateWorkExperienceDto } from './dto/request/update-work-experience-request.dto';
 import { WorkExperienceResponseDto } from './dto/response/work-experience-response.dto';
 import { toApiResponse } from '../common/response/service-result-mapper';
@@ -73,6 +74,25 @@ export class WorkExperiencesController {
     @CurrentUser() user: AuthUser,
   ) {
     const result = await this.workExperiencesService.add(employeeId, dto, user);
+
+    return toApiResponse(result);
+  }
+
+  @Put()
+  @ApiOperation({ summary: 'Заменить все записи об опыте работы сотрудника' })
+  @ApiParam({ name: 'employeeId', type: Number })
+  @ApiBody({ type: ReplaceWorkExperiencesDto })
+  @ApiDataResponse(WorkExperienceResponseDto, { isArray: true })
+  async replaceAll(
+    @Param('employeeId', ParseIntPipe) employeeId: number,
+    @Body() dto: ReplaceWorkExperiencesDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    const result = await this.workExperiencesService.replaceAll(
+      employeeId,
+      dto.items,
+      user,
+    );
 
     return toApiResponse(result);
   }

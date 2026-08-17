@@ -3,15 +3,20 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsDateString,
-  IsEmail,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
   Min,
+  MinLength,
 } from 'class-validator';
+import {
+  IsDateOnOrAfterToday,
+  IsDateOnOrBefore,
+} from '../../../common/validators/date.validators';
 
 export class CreateEmployeeDto {
   @ApiProperty({
@@ -23,11 +28,15 @@ export class CreateEmployeeDto {
 
   @ApiProperty({
     example: '1998-05-10',
-    description: 'Дата рождения сотрудника',
+    description:
+      'Дата рождения сотрудника. Не позднее 2010-12-31 (не моложе 16 лет).',
     type: String,
     format: 'date',
   })
   @IsDateString()
+  @IsDateOnOrBefore('2010-12-31', {
+    message: 'Сотрудник должен быть не моложе 16 лет (год рождения не позже 2010)',
+  })
   birthDate!: string;
 
   @ApiProperty({
@@ -46,32 +55,44 @@ export class CreateEmployeeDto {
 
   @ApiProperty({
     example: 'AA',
-    description: 'Серия паспорта',
-    maxLength: 10,
+    description: 'Серия паспорта. Ровно 2 буквы.',
+    minLength: 2,
+    maxLength: 2,
   })
   @IsNotEmpty()
   @IsString()
-  @MaxLength(10)
+  @MinLength(2)
+  @MaxLength(2)
+  @Matches(/^[A-Za-zА-Яа-яЁё]{2}$/, {
+    message: 'Серия паспорта должна состоять из 2 букв',
+  })
   passportSeries!: string;
 
   @ApiProperty({
     example: '1234567',
-    description: 'Номер паспорта',
-    maxLength: 20,
+    description: 'Номер паспорта. Только цифры, не больше 7.',
+    minLength: 1,
+    maxLength: 7,
   })
   @IsNotEmpty()
   @IsString()
-  @MaxLength(20)
+  @MaxLength(7)
+  @Matches(/^\d{1,7}$/, {
+    message: 'Номер паспорта должен содержать только цифры, не больше 7',
+  })
   passportNumber!: string;
 
   @ApiProperty({
-    example: '2020-06-15',
-    description: 'Дата выдачи паспорта',
+    example: '2030-06-15',
+    description: 'Дата окончания срока действия паспорта',
     type: String,
     format: 'date',
   })
   @IsDateString()
-  passportIssueDate!: string;
+  @IsDateOnOrAfterToday({
+    message: 'Укажите действительный паспорт',
+  })
+  passportExpireDate!: string;
 
   @ApiProperty({
     example: 'ОВД Мирзо-Улугбекского района',
@@ -85,23 +106,16 @@ export class CreateEmployeeDto {
 
   @ApiProperty({
     example: '+998901234567',
-    description: 'Номер телефона сотрудника',
+    description: 'Номер телефона сотрудника в международном формате',
     maxLength: 30,
   })
   @IsNotEmpty()
   @IsString()
   @MaxLength(30)
-  phone!: string;
-
-  @ApiPropertyOptional({
-    example: 'alisher.karimov@example.com',
-    description: 'Электронная почта сотрудника',
-    maxLength: 255,
+  @Matches(/^\+[1-9]\d{7,14}$/, {
+    message: 'Укажите корректный номер телефона в международном формате',
   })
-  @IsOptional()
-  @IsEmail()
-  @MaxLength(255)
-  email?: string;
+  phone!: string;
 
   @ApiProperty({
     example: 'г. Ташкент, Мирзо-Улугбекский район, ул. Навои, дом 10',
@@ -118,19 +132,20 @@ export class CreateEmployeeDto {
     description: 'Уникальный табельный номер сотрудника',
     maxLength: 50,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   @MaxLength(50)
-  employeeNumber!: string;
+  employeeNumber?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: '2026-01-15',
     description: 'Дата приема на работу',
     type: String,
     format: 'date',
   })
+  @IsOptional()
   @IsDateString()
-  hireDate!: string;
+  hireDate?: string;
 
   @ApiProperty({
     example: 1,
@@ -153,34 +168,38 @@ export class CreateEmployeeDto {
   @IsInt()
   nationalityId!: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 1,
     description: 'Идентификатор подразделения из справочника Department',
   })
+  @IsOptional()
   @IsInt()
-  departmentId!: number;
+  departmentId?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 2,
     description: 'Идентификатор должности из справочника Position',
   })
+  @IsOptional()
   @IsInt()
-  positionId!: number;
+  positionId?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 1,
     description: 'Идентификатор типа занятости из справочника EmploymentType',
   })
+  @IsOptional()
   @IsInt()
-  employmentTypeId!: number;
+  employmentTypeId?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 3,
     description:
       'Идентификатор уровня образования из справочника EducationLevel',
   })
+  @IsOptional()
   @IsInt()
-  educationLevelId!: number;
+  educationLevelId?: number;
 
   @ApiProperty({
     example: 1,
@@ -199,14 +218,15 @@ export class CreateEmployeeDto {
   @IsInt()
   driverLicenseCategoryId?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 60,
     description: 'Общий трудовой стаж в месяцах',
     minimum: 0,
   })
+  @IsOptional()
   @IsInt()
   @Min(0)
-  totalExperienceMonths!: number;
+  totalExperienceMonths?: number;
 
   @ApiPropertyOptional({
     example: 48,
@@ -218,19 +238,33 @@ export class CreateEmployeeDto {
   @Min(0)
   specialtyExperienceMonths?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: true,
     description: 'Проходил ли сотрудник военную службу',
   })
+  @IsOptional()
   @IsBoolean()
-  militaryService!: boolean;
+  militaryService?: boolean;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: false,
     description: 'Наличие водительского удостоверения',
   })
+  @IsOptional()
   @IsBoolean()
-  hasDriverLicense!: boolean;
+  hasDriverLicense?: boolean;
+
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'Последний сохранённый шаг анкеты',
+    minimum: 0,
+    maximum: 4,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(4)
+  formStep?: number;
 
   @ApiPropertyOptional({
     example: 'Дополнительная информация о сотруднике',

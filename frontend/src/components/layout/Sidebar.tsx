@@ -2,18 +2,25 @@ import { NavLink } from 'react-router-dom';
 import { routes } from '../../constants/routes.ts';
 import { useAuth } from '../../features/auth/hooks/useAuth.ts';
 
-export function Sidebar() {
+type SidebarProps = {
+  className?: string;
+  onNavigate?: () => void;
+};
+
+export function Sidebar({ className = '', onNavigate }: SidebarProps) {
   const { account } = useAuth();
   const employeeId = account?.employeeId;
   const isAdmin = account?.role === 'ADMIN';
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `block rounded-xl px-3 py-2 text-sm font-medium ${
+    `block rounded-xl px-3 py-2.5 text-sm font-medium ${
       isActive ? 'bg-brand-50 text-brand-700' : 'text-ink-700 hover:bg-slate-50'
     }`;
 
   return (
-    <aside className="flex w-64 flex-col border-r border-line bg-white p-5">
+    <aside
+      className={`flex w-72 shrink-0 flex-col border-r border-line bg-white p-5 lg:w-64 ${className}`}
+    >
       <div className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-700">
           HR
@@ -22,7 +29,7 @@ export function Sidebar() {
           {isAdmin ? 'Админ-панель' : 'Кабинет сотрудника'}
         </h1>
       </div>
-      <nav className="space-y-1">
+      <nav className="space-y-1" onClick={onNavigate}>
         {isAdmin ? (
           <>
             <NavLink to={routes.admin} end className={linkClass}>

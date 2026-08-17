@@ -30,7 +30,7 @@ export function Pagination({
   const pages = Math.max(totalPages, 1);
 
   return (
-    <div className="flex items-center justify-between gap-3 text-sm text-ink-500">
+    <div className="flex flex-col gap-3 text-sm text-ink-500 sm:flex-row sm:items-center sm:justify-between">
       <p>Всего: {totalCount}</p>
       <div className="flex items-center gap-2">
         <PageButton

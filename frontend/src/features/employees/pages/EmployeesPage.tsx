@@ -19,9 +19,9 @@ export function EmployeesPage() {
   }
 
   return (
-    <div className="flex gap-6">
+    <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
       {refsLoading ? (
-        <aside className="w-64 rounded-2xl border border-line bg-white p-4 text-sm text-ink-500">
+        <aside className="rounded-2xl border border-line bg-white p-4 text-sm text-ink-500 lg:w-64">
           Загружаем фильтры...
         </aside>
       ) : (
@@ -33,12 +33,12 @@ export function EmployeesPage() {
       )}
 
       <div className="min-w-0 flex-1 space-y-4">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-sm font-semibold text-brand-700">Админ-панель</p>
             <h1 className="text-2xl font-bold">Сотрудники</h1>
           </div>
-          <div className="w-72">
+          <div className="w-full sm:max-w-72">
             <Input
               placeholder="Поиск по имени, email, ПИНФЛ"
               value={filter.searchTerm ?? ''}

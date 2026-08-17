@@ -85,13 +85,13 @@ export class EmployeesService extends BaseService<
       pinfl: dto.pinfl,
       passportSeries: dto.passportSeries,
       passportNumber: dto.passportNumber,
-      passportIssueDate: new Date(dto.passportIssueDate),
+      passportExpireDate: new Date(dto.passportExpireDate),
       passportIssuedBy: dto.passportIssuedBy,
       phone: dto.phone,
-      email: dto.email,
       address: dto.address,
-      employeeNumber: dto.employeeNumber,
-      hireDate: new Date(dto.hireDate),
+      employeeNumber: dto.employeeNumber ?? `EMP-${dto.accountId}`,
+      hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
+      formStep: dto.formStep ?? 1,
       genderId: dto.genderId,
       citizenshipId: dto.citizenshipId,
       nationalityId: dto.nationalityId,
@@ -101,10 +101,10 @@ export class EmployeesService extends BaseService<
       educationLevelId: dto.educationLevelId,
       maritalStatusId: dto.maritalStatusId,
       driverLicenseCategoryId: dto.driverLicenseCategoryId,
-      totalExperienceMonths: dto.totalExperienceMonths,
+      totalExperienceMonths: dto.totalExperienceMonths ?? 0,
       specialtyExperienceMonths: dto.specialtyExperienceMonths,
-      militaryService: dto.militaryService,
-      hasDriverLicense: dto.hasDriverLicense,
+      militaryService: dto.militaryService ?? false,
+      hasDriverLicense: dto.hasDriverLicense ?? false,
       additionalInfo: dto.additionalInfo,
     };
   }
@@ -116,15 +116,15 @@ export class EmployeesService extends BaseService<
       pinfl: dto.pinfl,
       passportSeries: dto.passportSeries,
       passportNumber: dto.passportNumber,
-      passportIssueDate: dto.passportIssueDate
-        ? new Date(dto.passportIssueDate)
+      passportExpireDate: dto.passportExpireDate
+        ? new Date(dto.passportExpireDate)
         : undefined,
       passportIssuedBy: dto.passportIssuedBy,
       phone: dto.phone,
-      email: dto.email,
       address: dto.address,
       employeeNumber: dto.employeeNumber,
       hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
+      formStep: dto.formStep,
       genderId: dto.genderId,
       citizenshipId: dto.citizenshipId,
       nationalityId: dto.nationalityId,
@@ -223,8 +223,7 @@ export class EmployeesService extends BaseService<
 
     const uniquenessError = await this.findUniquenessError({
       pinfl: dto.pinfl,
-      email: dto.email,
-      employeeNumber: dto.employeeNumber,
+      employeeNumber: dto.employeeNumber ?? `EMP-${dto.accountId}`,
     });
 
     if (uniquenessError) {
@@ -276,7 +275,6 @@ export class EmployeesService extends BaseService<
     const uniquenessError = await this.findUniquenessError(
       {
         pinfl: dto.pinfl,
-        email: dto.email,
         employeeNumber: dto.employeeNumber,
       },
       id,
@@ -286,20 +284,28 @@ export class EmployeesService extends BaseService<
       return uniquenessError;
     }
 
-    return super.update(id, dto, where);
+    return super.update(
+      id,
+      {
+        ...dto,
+        formStep: Math.max(
+          currentEmployee.formStep,
+          dto.formStep ?? currentEmployee.formStep,
+        ),
+      },
+      where,
+    );
   }
 
   private async findUniquenessError(
     fields: {
       pinfl?: string;
-      email?: string;
       employeeNumber?: string;
     },
     excludeId?: number,
   ): Promise<ServiceResult<EmployeeDetailsResponseDto> | null> {
     const filters: Prisma.EmployeeWhereInput[] = [
       ...(fields.pinfl ? [{ pinfl: fields.pinfl }] : []),
-      ...(fields.email ? [{ email: fields.email }] : []),
       ...(fields.employeeNumber
         ? [{ employeeNumber: fields.employeeNumber }]
         : []),
@@ -327,16 +333,6 @@ export class EmployeesService extends BaseService<
     }
 
     if (
-      fields.email &&
-      existingEmployees.some((employee) => employee.email === fields.email)
-    ) {
-      return ServiceResult.error(
-        ErrorCode.DuplicateData,
-        'Сотрудник с указанным email уже существует',
-      );
-    }
-
-    if (
       fields.employeeNumber &&
       existingEmployees.some(
         (employee) => employee.employeeNumber === fields.employeeNumber,
@@ -357,7 +353,11 @@ export class EmployeesService extends BaseService<
   ): Promise<ServiceResult<EmployeeDetailsResponseDto> | null> {
     const account = await this.prisma.account.findUnique({
       where: { id: accountId },
-      include: { employee: true },
+      include: {
+        employee: {
+          select: { id: true },
+        },
+      },
     });
 
     if (!account) {
@@ -423,12 +423,6 @@ export class EmployeesService extends BaseService<
               contains: searchTerm,
               mode: 'insensitive',
             },
-          },
-        },
-        {
-          email: {
-            contains: searchTerm,
-            mode: 'insensitive',
           },
         },
         {

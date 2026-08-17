@@ -153,6 +153,32 @@ export class EducationsService extends BaseService<
     );
   }
 
+  async replaceAll(
+    employeeId: number,
+    items: CreateEducationDto[],
+    user: AuthUser,
+  ): Promise<ServiceResult<EducationResponseDto[]>> {
+    return this.withEmployeeAccess(employeeId, user, async () => {
+      await this.prisma.education.updateMany({
+        where: { employeeId, isDeleted: false },
+        data: { isDeleted: true, deletedAt: new Date() },
+      });
+
+      for (const item of items) {
+        const created = await this.create(item, { employeeId });
+        if (!created.successful) {
+          return ServiceResult.error(
+            created.errorInfo?.code ?? ErrorCode.BadRequest,
+            created.errorInfo?.message ?? 'Не удалось сохранить образование',
+          );
+        }
+      }
+
+      const educations = await this.findByEmployeeId(employeeId);
+      return ServiceResult.success(educations);
+    });
+  }
+
   remove(
     employeeId: number,
     id: number,

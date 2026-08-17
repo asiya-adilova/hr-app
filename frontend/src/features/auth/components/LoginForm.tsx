@@ -3,8 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../../components/ui/Button.tsx';
 import { Input } from '../../../components/ui/Input.tsx';
 import { homePath, routes } from '../../../constants/routes.ts';
+import { useDebouncedError } from '../../../hooks/useDebouncedError.ts';
 import { ApiError } from '../../../services/api-client.ts';
-import { isEmail } from '../../../utils/validation.ts';
+import { isEmail, emailFormatError } from '../../../utils/validation.ts';
 import { useAuth } from '../hooks/useAuth.ts';
 
 export function LoginForm() {
@@ -12,18 +13,26 @@ export function LoginForm() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const emailIdle = useDebouncedError(email, emailFormatError);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!isEmail(email) || !password) {
-      setError('Введите email и пароль');
+      if (!isEmail(email)) {
+        setEmailError(email.trim() ? 'Некорректный email' : 'Укажите email');
+      }
+      if (!password) {
+        setError('Введите пароль');
+      }
       return;
     }
 
     setSubmitting(true);
     setError(null);
+    setEmailError('');
 
     try {
       const account = await login({ email, password });
@@ -42,7 +51,12 @@ export function LoginForm() {
         name="email"
         type="email"
         value={email}
-        onChange={(event) => setEmail(event.target.value)}
+        error={emailError || emailIdle.error}
+        onChange={(event) => {
+          setEmail(event.target.value);
+          setEmailError('');
+        }}
+        onBlur={emailIdle.showNow}
         placeholder="you@company.com"
       />
       <Input

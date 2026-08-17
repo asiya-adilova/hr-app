@@ -31,12 +31,12 @@ type EmployeeRecord = {
   pinfl: string;
   passportSeries: string;
   passportNumber: string;
-  passportIssueDate: Date;
+  passportExpireDate: Date;
   passportIssuedBy: string;
   phone: string;
-  email: string | null;
   address: string;
-  hireDate: Date;
+  hireDate: Date | null;
+  formStep: number;
   totalExperienceMonths: number;
   specialtyExperienceMonths: number | null;
   hasDriverLicense: boolean;
@@ -96,18 +96,18 @@ export type EmployeeWithLookups = EmployeeRecord & {
   gender: NamedReference;
   citizenship: NamedReference;
   nationality: NamedReference;
-  department: NamedReference;
-  position: NamedReference;
-  employmentType: NamedReference;
-  educationLevel: NamedReference;
+  department: NamedReference | null;
+  position: NamedReference | null;
+  employmentType: NamedReference | null;
+  educationLevel: NamedReference | null;
   maritalStatus: NamedReference;
   driverLicenseCategory: NamedReference | null;
 };
 
 export type EmployeeWithTableReferences = EmployeeRecord & {
-  department: NamedReference;
-  position: NamedReference;
-  educationLevel: NamedReference;
+  department: NamedReference | null;
+  position: NamedReference | null;
+  educationLevel: NamedReference | null;
 };
 
 export class EmployeeMapper {
@@ -168,10 +168,10 @@ export class EmployeeMapper {
       lastName: employee.account.lastName,
       middleName: employee.account.middleName ?? undefined,
       fullName: EmployeeMapper.toFullName(employee.account),
-      departmentName: employee.department.name,
-      positionName: employee.position.name,
-      educationLevelName: employee.educationLevel.name,
-      hireDate: employee.hireDate,
+      departmentName: employee.department?.name ?? '—',
+      positionName: employee.position?.name ?? '—',
+      educationLevelName: employee.educationLevel?.name ?? '—',
+      hireDate: employee.hireDate ?? undefined,
       totalExperienceMonths: employee.totalExperienceMonths,
       specialtyExperienceMonths:
         employee.specialtyExperienceMonths ?? undefined,
@@ -194,6 +194,7 @@ export class EmployeeMapper {
       id: employee.id,
       accountId: employee.accountId,
       employeeNumber: employee.employeeNumber,
+      formStep: employee.formStep,
 
       firstName: employee.account.firstName,
       lastName: employee.account.lastName,
@@ -205,19 +206,23 @@ export class EmployeeMapper {
       passport: EmployeeMapper.toPassportResponse(employee),
       contact: EmployeeMapper.toContactResponse(employee),
 
-      hireDate: employee.hireDate,
+      hireDate: employee.hireDate ?? undefined,
 
       gender: EmployeeMapper.toReferenceResponse(employee.gender),
       citizenship: EmployeeMapper.toReferenceResponse(employee.citizenship),
       nationality: EmployeeMapper.toReferenceResponse(employee.nationality),
-      department: EmployeeMapper.toReferenceResponse(employee.department),
-      position: EmployeeMapper.toReferenceResponse(employee.position),
-      employmentType: EmployeeMapper.toReferenceResponse(
-        employee.employmentType,
-      ),
-      educationLevel: EmployeeMapper.toReferenceResponse(
-        employee.educationLevel,
-      ),
+      department: employee.department
+        ? EmployeeMapper.toReferenceResponse(employee.department)
+        : undefined,
+      position: employee.position
+        ? EmployeeMapper.toReferenceResponse(employee.position)
+        : undefined,
+      employmentType: employee.employmentType
+        ? EmployeeMapper.toReferenceResponse(employee.employmentType)
+        : undefined,
+      educationLevel: employee.educationLevel
+        ? EmployeeMapper.toReferenceResponse(employee.educationLevel)
+        : undefined,
       maritalStatus: EmployeeMapper.toReferenceResponse(employee.maritalStatus),
 
       experience: EmployeeMapper.toExperienceResponse(employee),
@@ -291,13 +296,13 @@ export class EmployeeMapper {
       pinfl: dto.pinfl,
       passportSeries: dto.passport.series,
       passportNumber: dto.passport.number,
-      passportIssueDate: dto.passport.issueDate,
+      passportExpireDate: dto.passport.expireDate,
       passportIssuedBy: dto.passport.issuedBy,
       phone: dto.contact.phone,
-      email: dto.contact.email,
       address: dto.contact.address,
       employeeNumber: dto.employeeNumber,
       hireDate: dto.hireDate,
+      formStep: dto.formStep ?? 0,
       totalExperienceMonths: dto.experience.totalMonths,
       specialtyExperienceMonths: dto.experience.specialtyMonths,
       militaryService: dto.militaryService,
@@ -306,10 +311,10 @@ export class EmployeeMapper {
       genderId: dto.gender.id,
       citizenshipId: dto.citizenship.id,
       nationalityId: dto.nationality.id,
-      departmentId: dto.department.id,
-      positionId: dto.position.id,
-      employmentTypeId: dto.employmentType.id,
-      educationLevelId: dto.educationLevel.id,
+      departmentId: dto.department?.id,
+      positionId: dto.position?.id,
+      employmentTypeId: dto.employmentType?.id,
+      educationLevelId: dto.educationLevel?.id,
       maritalStatusId: dto.maritalStatus.id,
       driverLicenseCategoryId: dto.driverLicense.categoryId,
       educations: {
@@ -336,7 +341,7 @@ export class EmployeeMapper {
     return {
       series: employee.passportSeries,
       number: employee.passportNumber,
-      issueDate: employee.passportIssueDate,
+      expireDate: employee.passportExpireDate,
       issuedBy: employee.passportIssuedBy,
     };
   }
@@ -346,7 +351,7 @@ export class EmployeeMapper {
   ): EmployeeContactResponseDto {
     return {
       phone: employee.phone,
-      email: employee.email ?? employee.account.email,
+      email: employee.account.email,
       address: employee.address,
     };
   }

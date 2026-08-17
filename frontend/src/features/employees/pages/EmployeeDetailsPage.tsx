@@ -21,7 +21,7 @@ export function EmployeeDetailsPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           {account?.role === 'ADMIN' ? (
             <Link to={routes.adminEmployees} className="text-sm text-brand-700">
@@ -29,12 +29,12 @@ export function EmployeeDetailsPage() {
             </Link>
           ) : null}
           <p className="text-sm font-semibold text-brand-700">Профиль</p>
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-xl font-bold sm:text-2xl">
             {employee.firstName} {employee.lastName}
           </h1>
         </div>
-        <Link to={routes.editEmployee(employee.id)}>
-          <Button variant="secondary">Редактировать</Button>
+        <Link to={routes.editEmployee(employee.id)} className="shrink-0">
+          <Button variant="secondary" className="w-full sm:w-auto">Редактировать</Button>
         </Link>
       </div>
       <EmployeeDetails employee={employee} />

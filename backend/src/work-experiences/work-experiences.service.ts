@@ -166,6 +166,32 @@ export class WorkExperiencesService extends BaseService<
     );
   }
 
+  async replaceAll(
+    employeeId: number,
+    items: CreateWorkExperienceDto[],
+    user: AuthUser,
+  ): Promise<ServiceResult<WorkExperienceResponseDto[]>> {
+    return this.withEmployeeAccess(employeeId, user, async () => {
+      await this.prisma.workExperience.updateMany({
+        where: { employeeId, isDeleted: false },
+        data: { isDeleted: true, deletedAt: new Date() },
+      });
+
+      for (const item of items) {
+        const created = await this.create(item, { employeeId });
+        if (!created.successful) {
+          return ServiceResult.error(
+            created.errorInfo?.code ?? ErrorCode.BadRequest,
+            created.errorInfo?.message ?? 'Не удалось сохранить опыт работы',
+          );
+        }
+      }
+
+      const experiences = await this.findByEmployeeId(employeeId);
+      return ServiceResult.success(experiences);
+    });
+  }
+
   async remove(
     employeeId: number,
     id: number,

@@ -20,7 +20,7 @@ export class LoginDto {
     example: 'admin@hr.local',
     description: 'Электронная почта аккаунта',
   })
-  @IsEmail()
+  @IsEmail({}, { message: 'Укажите корректный email' })
   @MaxLength(255)
   email!: string;
 

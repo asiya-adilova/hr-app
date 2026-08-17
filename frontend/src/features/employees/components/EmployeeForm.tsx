@@ -1,9 +1,21 @@
 import { useMemo, useState } from 'react';
 import { Button } from '../../../components/ui/Button.tsx';
+import { DateField } from '../../../components/ui/DateField.tsx';
+import { PhoneField } from '../../../components/ui/PhoneField.tsx';
 import { Input } from '../../../components/ui/Input.tsx';
 import { Select } from '../../../components/ui/Select.tsx';
 import { Stepper } from '../../../components/ui/Stepper.tsx';
-import { isEmail, isPinfl, required } from '../../../utils/validation.ts';
+import {
+  BIRTH_DATE_MAX,
+  digitsOnly,
+  isBirthDateAllowed,
+  isPassportNumber,
+  isPassportSeries,
+  isPinfl,
+  isValidPhone,
+  lettersOnly,
+  required,
+} from '../../../utils/validation.ts';
 import { useReferences } from '../../references/hooks/useReferences.ts';
 import type {
   CreateEmployeePayload,
@@ -24,10 +36,9 @@ type FormValues = {
   pinfl: string;
   passportSeries: string;
   passportNumber: string;
-  passportIssueDate: string;
+  passportExpireDate: string;
   passportIssuedBy: string;
   phone: string;
-  email: string;
   address: string;
   employeeNumber: string;
   hireDate: string;
@@ -55,11 +66,11 @@ type EmployeeFormProps = {
   initial?: EmployeeDetails;
   submitting?: boolean;
   error?: string | null;
-  onSubmit: (payload: {
+  onSaveStep: (step: number, payload: {
     employee: CreateEmployeePayload;
     educations: Array<Omit<EducationItem, 'id'>>;
     workExperiences: Array<Omit<WorkExperienceItem, 'id'>>;
-  }) => Promise<void>;
+  }) => Promise<boolean | void>;
 };
 
 function emptyEducation() {
@@ -86,20 +97,23 @@ function fromInitial(
     pinfl: initial?.pinfl ?? '',
     passportSeries: initial?.passport.series ?? '',
     passportNumber: initial?.passport.number ?? '',
-    passportIssueDate: initial?.passport.issueDate?.toString().slice(0, 10) ?? '',
+    passportExpireDate: initial?.passport.expireDate?.toString().slice(0, 10) ?? '',
     passportIssuedBy: initial?.passport.issuedBy ?? '',
     phone: initial?.contact.phone ?? '',
-    email: initial?.contact.email ?? '',
     address: initial?.contact.address ?? '',
     employeeNumber: initial?.employeeNumber ?? hint,
     hireDate: initial?.hireDate?.toString().slice(0, 10) ?? '',
     genderId: initial ? String(initial.gender.id) : '',
     citizenshipId: initial ? String(initial.citizenship.id) : '',
     nationalityId: initial ? String(initial.nationality.id) : '',
-    departmentId: initial ? String(initial.department.id) : '',
-    positionId: initial ? String(initial.position.id) : '',
-    employmentTypeId: initial ? String(initial.employmentType.id) : '',
-    educationLevelId: initial ? String(initial.educationLevel.id) : '',
+    departmentId: initial?.department ? String(initial.department.id) : '',
+    positionId: initial?.position ? String(initial.position.id) : '',
+    employmentTypeId: initial?.employmentType
+      ? String(initial.employmentType.id)
+      : '',
+    educationLevelId: initial?.educationLevel
+      ? String(initial.educationLevel.id)
+      : '',
     maritalStatusId: initial ? String(initial.maritalStatus.id) : '',
     driverLicenseCategoryId: initial?.driverLicense.categoryId
       ? String(initial.driverLicense.categoryId)
@@ -135,10 +149,15 @@ export function EmployeeForm({
   initial,
   submitting,
   error,
-  onSubmit,
+  onSaveStep,
 }: EmployeeFormProps) {
   const { data: refs, loading, error: refsError } = useReferences();
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(() => {
+    if (!initial?.formStep || initial.formStep >= 4) {
+      return 0;
+    }
+    return Math.min(initial.formStep, 3);
+  });
   const [values, setValues] = useState<FormValues>(() =>
     fromInitial(employeeNumberHint, initial),
   );
@@ -188,14 +207,32 @@ export function EmployeeForm({
     const nextErrors: Record<string, string> = {};
 
     if (current === 0) {
-      if (!required(values.birthDate)) nextErrors.birthDate = 'Укажите дату рождения';
+      if (!required(values.birthDate)) {
+        nextErrors.birthDate = 'Укажите дату рождения';
+      } else if (!isBirthDateAllowed(values.birthDate)) {
+        nextErrors.birthDate =
+          'Сотрудник должен быть не моложе 16 лет (год рождения не позже 2010)';
+      }
       if (!isPinfl(values.pinfl)) nextErrors.pinfl = 'ПИНФЛ — 14 цифр';
-      if (!required(values.passportSeries)) nextErrors.passportSeries = 'Обязательно';
-      if (!required(values.passportNumber)) nextErrors.passportNumber = 'Обязательно';
-      if (!required(values.passportIssueDate)) nextErrors.passportIssueDate = 'Обязательно';
+      if (!required(values.passportSeries)) {
+        nextErrors.passportSeries = 'Обязательно';
+      } else if (!isPassportSeries(values.passportSeries)) {
+        nextErrors.passportSeries = 'Серия паспорта — 2 буквы';
+      }
+      if (!required(values.passportNumber)) {
+        nextErrors.passportNumber = 'Обязательно';
+      } else if (!isPassportNumber(values.passportNumber)) {
+        nextErrors.passportNumber = 'Номер паспорта — до 7 цифр';
+      }
+      if (!required(values.passportExpireDate)) {
+        nextErrors.passportExpireDate = 'Обязательно';
+      }
       if (!required(values.passportIssuedBy)) nextErrors.passportIssuedBy = 'Обязательно';
-      if (!required(values.phone)) nextErrors.phone = 'Обязательно';
-      if (values.email && !isEmail(values.email)) nextErrors.email = 'Некорректный email';
+      if (!required(values.phone)) {
+        nextErrors.phone = 'Обязательно';
+      } else if (!isValidPhone(values.phone)) {
+        nextErrors.phone = 'Укажите корректный номер телефона';
+      }
       if (!required(values.address)) nextErrors.address = 'Обязательно';
       if (!required(values.genderId)) nextErrors.genderId = 'Обязательно';
       if (!required(values.citizenshipId)) nextErrors.citizenshipId = 'Обязательно';
@@ -232,33 +269,30 @@ export function EmployeeForm({
     return Object.keys(nextErrors).length === 0;
   }
 
-  async function handleSubmit() {
-    if (![0, 1, 2, 3].every((item) => validateStep(item))) {
-      const firstInvalid = [0, 1, 2, 3].find((item) => !validateStep(item)) ?? 0;
-      setStep(firstInvalid);
-      return;
-    }
-
+  function buildPayload() {
     const employee: CreateEmployeePayload = {
       accountId,
       birthDate: values.birthDate,
       pinfl: values.pinfl,
       passportSeries: values.passportSeries,
       passportNumber: values.passportNumber,
-      passportIssueDate: values.passportIssueDate,
+      passportExpireDate: values.passportExpireDate,
       passportIssuedBy: values.passportIssuedBy,
       phone: values.phone,
-      email: values.email || undefined,
       address: values.address,
       employeeNumber: values.employeeNumber,
-      hireDate: values.hireDate,
+      hireDate: values.hireDate || undefined,
       genderId: Number(values.genderId),
       citizenshipId: Number(values.citizenshipId),
       nationalityId: Number(values.nationalityId),
-      departmentId: Number(values.departmentId),
-      positionId: Number(values.positionId),
-      employmentTypeId: Number(values.employmentTypeId),
-      educationLevelId: Number(values.educationLevelId),
+      departmentId: values.departmentId ? Number(values.departmentId) : undefined,
+      positionId: values.positionId ? Number(values.positionId) : undefined,
+      employmentTypeId: values.employmentTypeId
+        ? Number(values.employmentTypeId)
+        : undefined,
+      educationLevelId: values.educationLevelId
+        ? Number(values.educationLevelId)
+        : undefined,
       maritalStatusId: Number(values.maritalStatusId),
       driverLicenseCategoryId: values.hasDriverLicense
         ? Number(values.driverLicenseCategoryId) || undefined
@@ -272,7 +306,7 @@ export function EmployeeForm({
       additionalInfo: values.additionalInfo || undefined,
     };
 
-    await onSubmit({
+    return {
       employee,
       educations: values.educations,
       workExperiences: values.workExperiences.map((item) => ({
@@ -280,7 +314,28 @@ export function EmployeeForm({
         endDate: item.isCurrent ? undefined : item.endDate || undefined,
         responsibilities: item.responsibilities || undefined,
       })),
-    });
+    };
+  }
+
+  async function handleNext() {
+    if (!validateStep(step)) {
+      return;
+    }
+
+    const shouldAdvance = await onSaveStep(step, buildPayload());
+    if (shouldAdvance === false) {
+      return;
+    }
+
+    setStep((current) => current + 1);
+  }
+
+  async function handleSubmit() {
+    if (!validateStep(step)) {
+      return;
+    }
+
+    await onSaveStep(step, buildPayload());
   }
 
   if (loading) {
@@ -296,38 +351,47 @@ export function EmployeeForm({
       <Stepper steps={steps} current={step} />
 
       {step === 0 ? (
-        <section className="grid gap-4 rounded-3xl border border-line bg-white p-6 md:grid-cols-2">
-          <Input
+        <section className="grid gap-4 rounded-3xl border border-line bg-white p-4 md:grid-cols-2 md:p-6">
+          <DateField
             label="Дата рождения"
-            type="date"
+            max={BIRTH_DATE_MAX}
             value={values.birthDate}
             error={fieldErrors.birthDate}
-            onChange={(event) => setField('birthDate', event.target.value)}
+            onChange={(value) => setField('birthDate', value)}
           />
           <Input
             label="ПИНФЛ"
+            inputMode="numeric"
+            maxLength={14}
             value={values.pinfl}
             error={fieldErrors.pinfl}
-            onChange={(event) => setField('pinfl', event.target.value)}
+            onChange={(event) => setField('pinfl', digitsOnly(event.target.value, 14))}
           />
           <Input
             label="Серия паспорта"
+            maxLength={2}
             value={values.passportSeries}
             error={fieldErrors.passportSeries}
-            onChange={(event) => setField('passportSeries', event.target.value)}
+            onChange={(event) =>
+              setField('passportSeries', lettersOnly(event.target.value, 2))
+            }
           />
           <Input
             label="Номер паспорта"
+            inputMode="numeric"
+            maxLength={7}
             value={values.passportNumber}
             error={fieldErrors.passportNumber}
-            onChange={(event) => setField('passportNumber', event.target.value)}
+            onChange={(event) =>
+              setField('passportNumber', digitsOnly(event.target.value, 7))
+            }
           />
-          <Input
-            label="Дата выдачи паспорта"
-            type="date"
-            value={values.passportIssueDate}
-            error={fieldErrors.passportIssueDate}
-            onChange={(event) => setField('passportIssueDate', event.target.value)}
+          <DateField
+            label="Срок действия паспорта"
+            value={values.passportExpireDate}
+            error={fieldErrors.passportExpireDate}
+            invalidIfPast
+            onChange={(value) => setField('passportExpireDate', value)}
           />
           <Input
             label="Кем выдан"
@@ -335,27 +399,21 @@ export function EmployeeForm({
             error={fieldErrors.passportIssuedBy}
             onChange={(event) => setField('passportIssuedBy', event.target.value)}
           />
-          <Input
+          <PhoneField
             label="Телефон"
             value={values.phone}
             error={fieldErrors.phone}
-            onChange={(event) => setField('phone', event.target.value)}
+            onChange={(value) => {
+              setField('phone', value);
+              setFieldErrors((current) => ({ ...current, phone: '' }));
+            }}
           />
           <Input
-            label="Email"
-            type="email"
-            value={values.email}
-            error={fieldErrors.email}
-            onChange={(event) => setField('email', event.target.value)}
+            label="Адрес"
+            value={values.address}
+            error={fieldErrors.address}
+            onChange={(event) => setField('address', event.target.value)}
           />
-          <div className="md:col-span-2">
-            <Input
-              label="Адрес"
-              value={values.address}
-              error={fieldErrors.address}
-              onChange={(event) => setField('address', event.target.value)}
-            />
-          </div>
           <Select
             label="Пол"
             value={values.genderId}
@@ -388,19 +446,18 @@ export function EmployeeForm({
       ) : null}
 
       {step === 1 ? (
-        <section className="grid gap-4 rounded-3xl border border-line bg-white p-6 md:grid-cols-2">
+        <section className="grid gap-4 rounded-3xl border border-line bg-white p-4 md:grid-cols-2 md:p-6">
           <Input
             label="Табельный номер"
             value={values.employeeNumber}
             error={fieldErrors.employeeNumber}
             onChange={(event) => setField('employeeNumber', event.target.value)}
           />
-          <Input
+          <DateField
             label="Дата приёма"
-            type="date"
             value={values.hireDate}
             error={fieldErrors.hireDate}
-            onChange={(event) => setField('hireDate', event.target.value)}
+            onChange={(value) => setField('hireDate', value)}
           />
           <Select
             label="Подразделение"
@@ -483,7 +540,7 @@ export function EmployeeForm({
       ) : null}
 
       {step === 2 ? (
-        <section className="space-y-4 rounded-3xl border border-line bg-white p-6">
+        <section className="space-y-4 rounded-3xl border border-line bg-white p-4 md:p-6">
           {values.educations.map((item, index) => (
             <div key={index} className="grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-3">
               <Input
@@ -543,7 +600,7 @@ export function EmployeeForm({
       ) : null}
 
       {step === 3 ? (
-        <section className="space-y-4 rounded-3xl border border-line bg-white p-6">
+        <section className="space-y-4 rounded-3xl border border-line bg-white p-4 md:p-6">
           {values.workExperiences.map((item, index) => (
             <div key={index} className="grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-2">
               <Input
@@ -565,24 +622,22 @@ export function EmployeeForm({
                   setField('workExperiences', workExperiences);
                 }}
               />
-              <Input
+              <DateField
                 label="Дата начала"
-                type="date"
                 value={item.startDate}
-                onChange={(event) => {
+                onChange={(value) => {
                   const workExperiences = [...values.workExperiences];
-                  workExperiences[index] = { ...item, startDate: event.target.value };
+                  workExperiences[index] = { ...item, startDate: value };
                   setField('workExperiences', workExperiences);
                 }}
               />
-              <Input
+              <DateField
                 label="Дата окончания"
-                type="date"
                 value={item.endDate ?? ''}
                 disabled={item.isCurrent}
-                onChange={(event) => {
+                onChange={(value) => {
                   const workExperiences = [...values.workExperiences];
-                  workExperiences[index] = { ...item, endDate: event.target.value };
+                  workExperiences[index] = { ...item, endDate: value };
                   setField('workExperiences', workExperiences);
                 }}
               />
@@ -642,10 +697,11 @@ export function EmployeeForm({
 
       {error ? <p className="text-sm text-rose-600">{error}</p> : null}
 
-      <div className="flex justify-between">
+      <div className="sticky bottom-0 z-10 -mx-4 flex justify-between gap-3 bg-page/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:bg-transparent md:px-0 md:py-0">
         <Button
           type="button"
           variant="secondary"
+          className="flex-1 sm:flex-none"
           disabled={step === 0}
           onClick={() => setStep((current) => current - 1)}
         >
@@ -654,16 +710,19 @@ export function EmployeeForm({
         {step < steps.length - 1 ? (
           <Button
             type="button"
-            onClick={() => {
-              if (validateStep(step)) {
-                setStep((current) => current + 1);
-              }
-            }}
+            className="flex-1 sm:flex-none"
+            disabled={submitting}
+            onClick={() => void handleNext()}
           >
-            Далее
+            {submitting ? 'Сохраняем...' : 'Далее'}
           </Button>
         ) : (
-          <Button type="button" disabled={submitting} onClick={() => void handleSubmit()}>
+          <Button
+            type="button"
+            className="flex-1 sm:flex-none"
+            disabled={submitting}
+            onClick={() => void handleSubmit()}
+          >
             {submitting ? 'Сохраняем...' : 'Сохранить анкету'}
           </Button>
         )}

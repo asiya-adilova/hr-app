@@ -27,9 +27,10 @@ export class EmployeePassportResponseDto {
   number!: string;
 
   @ApiProperty({
-    example: '2019-06-20',
+    example: '2029-06-20',
+    description: 'Дата окончания срока действия паспорта',
   })
-  issueDate!: Date;
+  expireDate!: Date;
 
   @ApiProperty({
     example: 'ГУВД г. Ташкента',
@@ -106,6 +107,12 @@ export class EmployeeDetailsResponseDto {
   employeeNumber!: string;
 
   @ApiProperty({
+    example: 1,
+    description: 'Последний сохранённый шаг анкеты',
+  })
+  formStep!: number;
+
+  @ApiProperty({
     example: 'Алишер',
   })
   firstName!: string;
@@ -152,10 +159,10 @@ export class EmployeeDetailsResponseDto {
   // Employment
   // =========================
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: '2020-03-15',
   })
-  hireDate!: Date;
+  hireDate?: Date;
 
   @ApiProperty({
     type: EmployeeReferenceResponseDto,
@@ -172,25 +179,25 @@ export class EmployeeDetailsResponseDto {
   })
   nationality!: EmployeeReferenceResponseDto;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: EmployeeReferenceResponseDto,
   })
-  department!: EmployeeReferenceResponseDto;
+  department?: EmployeeReferenceResponseDto;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: EmployeeReferenceResponseDto,
   })
-  position!: EmployeeReferenceResponseDto;
+  position?: EmployeeReferenceResponseDto;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: EmployeeReferenceResponseDto,
   })
-  employmentType!: EmployeeReferenceResponseDto;
+  employmentType?: EmployeeReferenceResponseDto;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: EmployeeReferenceResponseDto,
   })
-  educationLevel!: EmployeeReferenceResponseDto;
+  educationLevel?: EmployeeReferenceResponseDto;
 
   @ApiProperty({
     type: EmployeeReferenceResponseDto,
