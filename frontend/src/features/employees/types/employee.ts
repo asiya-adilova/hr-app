@@ -86,8 +86,6 @@ export type CreateEmployeePayload = {
   educationLevelId?: number;
   maritalStatusId: number;
   driverLicenseCategoryId?: number;
-  totalExperienceMonths?: number;
-  specialtyExperienceMonths?: number;
   militaryService?: boolean;
   hasDriverLicense?: boolean;
   additionalInfo?: string;

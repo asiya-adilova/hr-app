@@ -10,6 +10,7 @@ import { CreateEducationDto } from './dto/request/create-education-request.dto';
 import { UpdateEducationDto } from './dto/request/update-education-request.dto';
 import type { Education } from '../../generated/prisma/client';
 import type { AuthUser } from '../security/strategies/jwt.strategy';
+import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
 
 @Injectable()
 export class EducationsService extends BaseService<
@@ -99,7 +100,11 @@ export class EducationsService extends BaseService<
       return uniquenessError;
     }
 
-    return super.create(dto, extra);
+    const created = await super.create(dto, extra);
+    if (created.successful) {
+      await syncEmployeeExperience(this.prisma, employeeId);
+    }
+    return created;
   }
 
   override async update(
@@ -140,7 +145,11 @@ export class EducationsService extends BaseService<
       return uniquenessError;
     }
 
-    return super.update(id, dto, where);
+    const updated = await super.update(id, dto, where);
+    if (updated.successful) {
+      await syncEmployeeExperience(this.prisma, employeeId);
+    }
+    return updated;
   }
 
   add(
@@ -175,6 +184,7 @@ export class EducationsService extends BaseService<
       }
 
       const educations = await this.findByEmployeeId(employeeId);
+      await syncEmployeeExperience(this.prisma, employeeId);
       return ServiceResult.success(educations);
     });
   }
@@ -184,9 +194,13 @@ export class EducationsService extends BaseService<
     id: number,
     user: AuthUser,
   ): Promise<ServiceResult<void>> {
-    return this.withEmployeeAccess(employeeId, user, () =>
-      super.delete(id, { employeeId }),
-    );
+    return this.withEmployeeAccess(employeeId, user, async () => {
+      const removed = await super.delete(id, { employeeId });
+      if (removed.successful) {
+        await syncEmployeeExperience(this.prisma, employeeId);
+      }
+      return removed;
+    });
   }
 
   private async findUniquenessError(

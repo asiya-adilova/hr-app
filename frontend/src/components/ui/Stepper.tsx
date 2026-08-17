@@ -27,7 +27,7 @@ export function Stepper({ steps, current }: StepperProps) {
         </div>
       </div>
 
-      <ol className="hidden gap-3 md:grid md:grid-cols-4">
+      <ol className="hidden gap-3 md:grid md:grid-cols-2 xl:grid-cols-5">
         {steps.map((step, index) => {
           const isActive = index === current;
           const done = index < current;

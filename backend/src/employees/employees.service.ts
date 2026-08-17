@@ -25,6 +25,7 @@ import {
   type SoftDeletable,
 } from '../common/services/base.service';
 import type { AuthUser } from '../security/strategies/jwt.strategy';
+import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
 
 @Injectable()
 export class EmployeesService extends BaseService<
@@ -100,9 +101,10 @@ export class EmployeesService extends BaseService<
       employmentTypeId: dto.employmentTypeId,
       educationLevelId: dto.educationLevelId,
       maritalStatusId: dto.maritalStatusId,
-      driverLicenseCategoryId: dto.driverLicenseCategoryId,
-      totalExperienceMonths: dto.totalExperienceMonths ?? 0,
-      specialtyExperienceMonths: dto.specialtyExperienceMonths,
+      driverLicenseCategoryId:
+        dto.hasDriverLicense === false ? null : dto.driverLicenseCategoryId,
+      totalExperienceMonths: 0,
+      specialtyExperienceMonths: 0,
       militaryService: dto.militaryService ?? false,
       hasDriverLicense: dto.hasDriverLicense ?? false,
       additionalInfo: dto.additionalInfo,
@@ -133,9 +135,8 @@ export class EmployeesService extends BaseService<
       employmentTypeId: dto.employmentTypeId,
       educationLevelId: dto.educationLevelId,
       maritalStatusId: dto.maritalStatusId,
-      driverLicenseCategoryId: dto.driverLicenseCategoryId,
-      totalExperienceMonths: dto.totalExperienceMonths,
-      specialtyExperienceMonths: dto.specialtyExperienceMonths,
+      driverLicenseCategoryId:
+        dto.hasDriverLicense === false ? null : dto.driverLicenseCategoryId,
       militaryService: dto.militaryService,
       hasDriverLicense: dto.hasDriverLicense,
       additionalInfo: dto.additionalInfo,
@@ -284,7 +285,7 @@ export class EmployeesService extends BaseService<
       return uniquenessError;
     }
 
-    return super.update(
+    const updated = await super.update(
       id,
       {
         ...dto,
@@ -295,6 +296,13 @@ export class EmployeesService extends BaseService<
       },
       where,
     );
+
+    if (!updated.successful) {
+      return updated;
+    }
+
+    await syncEmployeeExperience(this.prisma, id);
+    return this.getById(id, where, user);
   }
 
   private async findUniquenessError(

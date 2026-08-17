@@ -1,6 +1,22 @@
 import { formatDate } from '../../../utils/date.ts';
 import type { EmployeeDetails } from '../types/employee.ts';
 
+function formatMonths(months?: number) {
+  if (!months) {
+    return '—';
+  }
+
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  if (years && rest) {
+    return `${years} г. ${rest} мес.`;
+  }
+  if (years) {
+    return `${years} г.`;
+  }
+  return `${rest} мес.`;
+}
+
 function Row({ label, value }: { label: string; value?: string | number | null }) {
   return (
     <div>
@@ -42,6 +58,23 @@ export function EmployeeDetails({ employee }: { employee: EmployeeDetails }) {
           <Row label="Должность" value={employee.position?.name} />
           <Row label="Тип занятости" value={employee.employmentType?.name} />
           <Row label="Дата приёма" value={formatDate(employee.hireDate)} />
+          <Row label="Общий стаж" value={formatMonths(employee.experience.totalMonths)} />
+          <Row
+            label="Стаж по специальности"
+            value={formatMonths(employee.experience.specialtyMonths)}
+          />
+          <Row label="Военная служба" value={employee.militaryService ? 'Да' : 'Нет'} />
+          <Row
+            label="Водительские права"
+            value={
+              employee.driverLicense.hasLicense
+                ? employee.driverLicense.categoryName ?? 'Да'
+                : 'Нет'
+            }
+          />
+          <div className="sm:col-span-2 md:col-span-3">
+            <Row label="Дополнительно" value={employee.additionalInfo} />
+          </div>
         </div>
       </section>
 

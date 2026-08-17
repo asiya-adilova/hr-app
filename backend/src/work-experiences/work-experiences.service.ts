@@ -10,6 +10,7 @@ import { CreateWorkExperienceDto } from './dto/request/create-work-experience-re
 import { UpdateWorkExperienceDto } from './dto/request/update-work-experience-request.dto';
 import type { WorkExperience } from '../../generated/prisma/client';
 import type { AuthUser } from '../security/strategies/jwt.strategy';
+import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
 
 @Injectable()
 export class WorkExperiencesService extends BaseService<
@@ -111,7 +112,11 @@ export class WorkExperiencesService extends BaseService<
       return uniquenessError;
     }
 
-    return super.create(dto, extra);
+    const created = await super.create(dto, extra);
+    if (created.successful) {
+      await syncEmployeeExperience(this.prisma, employeeId);
+    }
+    return created;
   }
 
   override async update(
@@ -153,7 +158,11 @@ export class WorkExperiencesService extends BaseService<
       return uniquenessError;
     }
 
-    return super.update(id, dto, where);
+    const updated = await super.update(id, dto, where);
+    if (updated.successful) {
+      await syncEmployeeExperience(this.prisma, employeeId);
+    }
+    return updated;
   }
 
   async add(
@@ -188,6 +197,7 @@ export class WorkExperiencesService extends BaseService<
       }
 
       const experiences = await this.findByEmployeeId(employeeId);
+      await syncEmployeeExperience(this.prisma, employeeId);
       return ServiceResult.success(experiences);
     });
   }
@@ -197,9 +207,13 @@ export class WorkExperiencesService extends BaseService<
     id: number,
     user: AuthUser,
   ): Promise<ServiceResult<void>> {
-    return this.withEmployeeAccess(employeeId, user, () =>
-      super.delete(id, { employeeId }),
-    );
+    return this.withEmployeeAccess(employeeId, user, async () => {
+      const removed = await super.delete(id, { employeeId });
+      if (removed.successful) {
+        await syncEmployeeExperience(this.prisma, employeeId);
+      }
+      return removed;
+    });
   }
 
   private async findUniquenessError(

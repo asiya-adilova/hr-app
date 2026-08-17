@@ -26,9 +26,15 @@ import type {
 
 const steps = [
   { title: 'Контакты', hint: 'Личные и паспортные данные' },
-  { title: 'Работа', hint: 'Должность и стаж' },
-  { title: 'Образование', hint: 'Учебные заведения' },
+  { title: 'Работа', hint: 'Должность и условия работы' },
   { title: 'Опыт работы', hint: 'Предыдущие места работы' },
+  { title: 'Образование', hint: 'Учебные заведения' },
+  { title: 'Дополнительно', hint: 'Военная служба и права' },
+];
+
+const YES_NO_OPTIONS = [
+  { value: 'true', label: 'Да' },
+  { value: 'false', label: 'Нет' },
 ];
 
 type FormValues = {
@@ -51,10 +57,8 @@ type FormValues = {
   educationLevelId: string;
   maritalStatusId: string;
   driverLicenseCategoryId: string;
-  totalExperienceMonths: string;
-  specialtyExperienceMonths: string;
-  militaryService: boolean;
-  hasDriverLicense: boolean;
+  militaryService: string;
+  hasDriverLicense: string;
   additionalInfo: string;
   educations: Array<Omit<EducationItem, 'id'>>;
   workExperiences: Array<Omit<WorkExperienceItem, 'id'>>;
@@ -118,10 +122,8 @@ function fromInitial(
     driverLicenseCategoryId: initial?.driverLicense.categoryId
       ? String(initial.driverLicense.categoryId)
       : '',
-    totalExperienceMonths: String(initial?.experience.totalMonths ?? 0),
-    specialtyExperienceMonths: String(initial?.experience.specialtyMonths ?? ''),
-    militaryService: initial?.militaryService ?? false,
-    hasDriverLicense: initial?.driverLicense.hasLicense ?? false,
+    militaryService: initial ? String(initial.militaryService) : '',
+    hasDriverLicense: initial ? String(initial.driverLicense.hasLicense) : '',
     additionalInfo: initial?.additionalInfo ?? '',
     educations: initial?.education.length
       ? initial.education.map((item) => ({
@@ -153,10 +155,10 @@ export function EmployeeForm({
 }: EmployeeFormProps) {
   const { data: refs, loading, error: refsError } = useReferences();
   const [step, setStep] = useState(() => {
-    if (!initial?.formStep || initial.formStep >= 4) {
+    if (!initial?.formStep || initial.formStep >= 5) {
       return 0;
     }
-    return Math.min(initial.formStep, 3);
+    return Math.min(initial.formStep, 4);
   });
   const [values, setValues] = useState<FormValues>(() =>
     fromInitial(employeeNumberHint, initial),
@@ -250,6 +252,14 @@ export function EmployeeForm({
     }
 
     if (current === 2) {
+      values.workExperiences.forEach((item, index) => {
+        if (!item.companyName.trim() || !item.position.trim() || !item.startDate) {
+          nextErrors[`experience-${index}`] = 'Заполните организацию, должность и дату начала';
+        }
+      });
+    }
+
+    if (current === 3) {
       values.educations.forEach((item, index) => {
         if (!item.institutionName.trim() || !item.specialty.trim()) {
           nextErrors[`education-${index}`] = 'Заполните учебное заведение и специальность';
@@ -257,12 +267,12 @@ export function EmployeeForm({
       });
     }
 
-    if (current === 3) {
-      values.workExperiences.forEach((item, index) => {
-        if (!item.companyName.trim() || !item.position.trim() || !item.startDate) {
-          nextErrors[`experience-${index}`] = 'Заполните организацию, должность и дату начала';
-        }
-      });
+    if (current === 4) {
+      if (!required(values.militaryService)) nextErrors.militaryService = 'Обязательно';
+      if (!required(values.hasDriverLicense)) nextErrors.hasDriverLicense = 'Обязательно';
+      if (values.hasDriverLicense === 'true' && !required(values.driverLicenseCategoryId)) {
+        nextErrors.driverLicenseCategoryId = 'Обязательно';
+      }
     }
 
     setFieldErrors(nextErrors);
@@ -294,15 +304,11 @@ export function EmployeeForm({
         ? Number(values.educationLevelId)
         : undefined,
       maritalStatusId: Number(values.maritalStatusId),
-      driverLicenseCategoryId: values.hasDriverLicense
+      driverLicenseCategoryId: values.hasDriverLicense === 'true'
         ? Number(values.driverLicenseCategoryId) || undefined
         : undefined,
-      totalExperienceMonths: Number(values.totalExperienceMonths || 0),
-      specialtyExperienceMonths: values.specialtyExperienceMonths
-        ? Number(values.specialtyExperienceMonths)
-        : undefined,
-      militaryService: values.militaryService,
-      hasDriverLicense: values.hasDriverLicense,
+      militaryService: values.militaryService === 'true',
+      hasDriverLicense: values.hasDriverLicense === 'true',
       additionalInfo: values.additionalInfo || undefined,
     };
 
@@ -487,59 +493,10 @@ export function EmployeeForm({
             error={fieldErrors.educationLevelId}
             onChange={(event) => setField('educationLevelId', event.target.value)}
           />
-          <Input
-            label="Общий стаж, месяцы"
-            type="number"
-            min={0}
-            value={values.totalExperienceMonths}
-            onChange={(event) => setField('totalExperienceMonths', event.target.value)}
-          />
-          <Input
-            label="Стаж по специальности, месяцы"
-            type="number"
-            min={0}
-            value={values.specialtyExperienceMonths}
-            onChange={(event) =>
-              setField('specialtyExperienceMonths', event.target.value)
-            }
-          />
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={values.militaryService}
-              onChange={(event) => setField('militaryService', event.target.checked)}
-            />
-            Военная служба
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={values.hasDriverLicense}
-              onChange={(event) => setField('hasDriverLicense', event.target.checked)}
-            />
-            Водительские права
-          </label>
-          {values.hasDriverLicense ? (
-            <Select
-              label="Категория прав"
-              value={values.driverLicenseCategoryId}
-              options={options.driverLicenseCategories}
-              onChange={(event) =>
-                setField('driverLicenseCategoryId', event.target.value)
-              }
-            />
-          ) : null}
-          <div className="md:col-span-2">
-            <Input
-              label="Дополнительно"
-              value={values.additionalInfo}
-              onChange={(event) => setField('additionalInfo', event.target.value)}
-            />
-          </div>
         </section>
       ) : null}
 
-      {step === 2 ? (
+      {step === 3 ? (
         <section className="space-y-4 rounded-3xl border border-line bg-white p-4 md:p-6">
           {values.educations.map((item, index) => (
             <div key={index} className="grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-3">
@@ -599,7 +556,7 @@ export function EmployeeForm({
         </section>
       ) : null}
 
-      {step === 3 ? (
+      {step === 2 ? (
         <section className="space-y-4 rounded-3xl border border-line bg-white p-4 md:p-6">
           {values.workExperiences.map((item, index) => (
             <div key={index} className="grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-2">
@@ -692,6 +649,48 @@ export function EmployeeForm({
           >
             Добавить опыт работы
           </Button>
+        </section>
+      ) : null}
+
+      {step === 4 ? (
+        <section className="grid gap-4 rounded-3xl border border-line bg-white p-4 md:grid-cols-2 md:p-6">
+          <Select
+            label="Проходили военную службу?"
+            value={values.militaryService}
+            options={YES_NO_OPTIONS}
+            error={fieldErrors.militaryService}
+            onChange={(event) => setField('militaryService', event.target.value)}
+          />
+          <Select
+            label="Есть водительские права?"
+            value={values.hasDriverLicense}
+            options={YES_NO_OPTIONS}
+            error={fieldErrors.hasDriverLicense}
+            onChange={(event) => {
+              setField('hasDriverLicense', event.target.value);
+              if (event.target.value !== 'true') {
+                setField('driverLicenseCategoryId', '');
+              }
+            }}
+          />
+          {values.hasDriverLicense === 'true' ? (
+            <Select
+              label="Категория прав"
+              value={values.driverLicenseCategoryId}
+              options={options.driverLicenseCategories}
+              error={fieldErrors.driverLicenseCategoryId}
+              onChange={(event) =>
+                setField('driverLicenseCategoryId', event.target.value)
+              }
+            />
+          ) : null}
+          <div className="md:col-span-2">
+            <Input
+              label="Дополнительно"
+              value={values.additionalInfo}
+              onChange={(event) => setField('additionalInfo', event.target.value)}
+            />
+          </div>
         </section>
       ) : null}
 

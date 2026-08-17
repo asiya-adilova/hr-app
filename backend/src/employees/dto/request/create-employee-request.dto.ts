@@ -219,26 +219,6 @@ export class CreateEmployeeDto {
   driverLicenseCategoryId?: number;
 
   @ApiPropertyOptional({
-    example: 60,
-    description: 'Общий трудовой стаж в месяцах',
-    minimum: 0,
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  totalExperienceMonths?: number;
-
-  @ApiPropertyOptional({
-    example: 48,
-    description: 'Стаж работы по специальности в месяцах',
-    minimum: 0,
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  specialtyExperienceMonths?: number;
-
-  @ApiPropertyOptional({
     example: true,
     description: 'Проходил ли сотрудник военную службу',
   })
@@ -258,12 +238,12 @@ export class CreateEmployeeDto {
     example: 1,
     description: 'Последний сохранённый шаг анкеты',
     minimum: 0,
-    maximum: 4,
+    maximum: 5,
   })
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(4)
+  @Max(5)
   formStep?: number;
 
   @ApiPropertyOptional({
