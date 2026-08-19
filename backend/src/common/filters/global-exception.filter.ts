@@ -10,6 +10,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 import { Response } from 'express';
 
 import { ErrorCode } from '../enums/error-code.enum';
+import { httpStatusToErrorCode } from '../http/error-http-status';
 import { ApiResponse } from '../response/api-response';
 
 @Catch()
@@ -76,18 +77,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         ? exceptionResponse
         : exception.message;
 
-    const errorCode =
-      status === HttpStatus.NOT_FOUND
-        ? ErrorCode.NotFound
-        : status === HttpStatus.BAD_REQUEST
-          ? ErrorCode.BadRequest
-          : status === HttpStatus.UNAUTHORIZED
-            ? ErrorCode.Unauthorized
-            : status === HttpStatus.FORBIDDEN
-              ? ErrorCode.Forbidden
-              : ErrorCode.InternalServerError;
-
-    response.status(status).json(ApiResponse.error(errorCode, message));
+    response
+      .status(status)
+      .json(ApiResponse.error(httpStatusToErrorCode(status), message));
   }
 
   private handlePrismaException(

@@ -5,11 +5,13 @@ const REFRESH_TOKEN_KEY = 'hr.refreshToken';
 
 export class ApiError extends Error {
   code?: number;
+  status?: number;
 
-  constructor(message: string, code?: number) {
+  constructor(message: string, code?: number, status?: number) {
     super(message);
     this.name = 'ApiError';
     this.code = code;
+    this.status = status;
   }
 }
 
@@ -56,7 +58,13 @@ function firstValidationMessage(
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
-  const payload = (await response.json()) as ApiResponse<T> | undefined;
+  let payload: ApiResponse<T> | undefined;
+
+  try {
+    payload = (await response.json()) as ApiResponse<T>;
+  } catch {
+    throw new ApiError('Ошибка запроса', undefined, response.status);
+  }
 
   if (!response.ok || payload?.successful === false) {
     throw new ApiError(
@@ -64,6 +72,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
         payload?.error?.message ??
         'Ошибка запроса',
       payload?.error?.code,
+      response.status,
     );
   }
 
