@@ -321,6 +321,83 @@ export class EmployeeMapper {
     };
   }
 
+  static toEducationUpdateData(dto: {
+    institutionName?: string;
+    specialty?: string;
+    educationLevelId?: number;
+    countryId?: number;
+    cityId?: number;
+    graduationYear?: number;
+  }) {
+    return {
+      ...(dto.institutionName !== undefined && {
+        institution: dto.institutionName,
+      }),
+      ...(dto.specialty !== undefined && { specialty: dto.specialty }),
+      ...(dto.educationLevelId !== undefined && {
+        educationLevelId: dto.educationLevelId,
+      }),
+      ...(dto.countryId !== undefined && { countryId: dto.countryId }),
+      ...(dto.cityId !== undefined && { cityId: dto.cityId }),
+      ...(dto.graduationYear !== undefined && {
+        graduationYear: dto.graduationYear,
+      }),
+    };
+  }
+
+  static toWorkExperienceUpdateData(dto: {
+    companyName?: string;
+    positionId?: number;
+    countryId?: number;
+    cityId?: number;
+    startDate?: string | Date;
+    endDate?: string | Date | null;
+    isCurrent?: boolean;
+    responsibilities?: string;
+  }) {
+    return {
+      ...(dto.companyName !== undefined && { companyName: dto.companyName }),
+      ...(dto.positionId !== undefined && { positionId: dto.positionId }),
+      ...(dto.countryId !== undefined && { countryId: dto.countryId }),
+      ...(dto.cityId !== undefined && { cityId: dto.cityId }),
+      ...(dto.startDate !== undefined && {
+        startDate: new Date(dto.startDate),
+      }),
+      ...(dto.isCurrent !== undefined || dto.endDate !== undefined
+        ? {
+            endDate: dto.isCurrent
+              ? null
+              : dto.endDate
+                ? new Date(dto.endDate)
+                : null,
+          }
+        : {}),
+      ...(dto.responsibilities !== undefined && {
+        responsibilities: dto.responsibilities,
+      }),
+    };
+  }
+
+  static toRelativeUpdateData(dto: {
+    fullName?: string;
+    relationshipType?: string;
+    birthDate?: string | Date | null;
+    phone?: string;
+    occupation?: string;
+  }) {
+    return {
+      ...(dto.fullName !== undefined && { fullName: dto.fullName }),
+      ...(dto.relationshipType !== undefined && {
+        relationship: dto.relationshipType,
+      }),
+      ...(dto.birthDate !== undefined && {
+        birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
+      }),
+      ...(dto.phone !== undefined && { phone: dto.phone }),
+      ...(dto.occupation !== undefined && { workplace: dto.occupation }),
+    };
+  }
+
   static toEmployeeUncheckedCreateData(dto: EmployeeDetailsResponseDto) {
     return {
       accountId: dto.accountId,

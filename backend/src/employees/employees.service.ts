@@ -20,6 +20,7 @@ import {
 } from './mappings/employee-mapper';
 import { EmployeeDetailsResponseDto } from './dto/response/employee-details-response.dto';
 import { EmployeeTableResponseDto } from './dto/response/employee-table-response.dto';
+import { ErrorMessage } from '../common/messages/error-message';
 import {
   BaseService,
   type SoftDeletable,
@@ -55,34 +56,44 @@ export class EmployeesService extends BaseService<
     id: number,
     where: Record<string, unknown> = {},
   ): Promise<ServiceResult<EmployeeDetailsResponseDto>> {
-    const denied =
-      await this.forbiddenUnlessEmployeeOwner<EmployeeDetailsResponseDto>(id);
-    if (denied) {
-      return denied;
-    }
+    return this.withEmployeeAccess(id, async () => {
+      const employee = await this.prisma.employee.findFirst({
+        where: { id, ...where },
+        include: employeeLookupInclude,
+      });
 
-    const employee = await this.prisma.employee.findFirst({
-      where: { id, ...where },
-      include: employeeLookupInclude,
+      if (!employee) {
+        return ServiceResult.error(
+          ErrorCode.NotFound,
+          ErrorMessage.employeeNotFound,
+        );
+      }
+
+      const [education, workExperience, relatives] = await Promise.all([
+        this.educationsService.getAllByEmployeeId(id),
+        this.workExperiencesService.getAllByEmployeeId(id),
+        this.relativesService.getAllByEmployeeId(id),
+      ]);
+
+      const nestedError = [education, workExperience, relatives].find(
+        (result) => !result.successful,
+      );
+      if (nestedError) {
+        return ServiceResult.error(
+          nestedError.errorInfo?.code ?? ErrorCode.InternalServerError,
+          nestedError.errorInfo?.message ??
+            'Не удалось загрузить связанные данные',
+        );
+      }
+
+      return ServiceResult.success(
+        EmployeeMapper.toDetailsResponse(employee, {
+          education: education.result ?? [],
+          workExperience: workExperience.result ?? [],
+          relatives: relatives.result ?? [],
+        }),
+      );
     });
-
-    if (!employee) {
-      return ServiceResult.error(ErrorCode.NotFound, this.notFoundMessage);
-    }
-
-    const [education, workExperience, relatives] = await Promise.all([
-      this.educationsService.findByEmployeeId(id),
-      this.workExperiencesService.findByEmployeeId(id),
-      this.relativesService.findByEmployeeId(id),
-    ]);
-
-    return ServiceResult.success(
-      EmployeeMapper.toDetailsResponse(employee, {
-        education,
-        workExperience,
-        relatives,
-      }),
-    );
   }
 
   async filter(
@@ -167,128 +178,126 @@ export class EmployeesService extends BaseService<
     dto: UpdateEmployeeDto,
     where: Record<string, unknown> = {},
   ): Promise<ServiceResult<EmployeeDetailsResponseDto>> {
-    const denied =
-      await this.forbiddenUnlessEmployeeOwner<EmployeeDetailsResponseDto>(id);
-    if (denied) {
-      return denied;
-    }
-
-    if (dto.accountId !== undefined && !this.isAdmin()) {
-      return ServiceResult.error(
-        ErrorCode.Forbidden,
-        'Недостаточно прав для изменения аккаунта сотрудника',
-      );
-    }
-
-    const currentEmployee = await this.prisma.employee.findFirst({
-      where: { id },
-    });
-
-    if (!currentEmployee) {
-      return ServiceResult.error(ErrorCode.NotFound, this.notFoundMessage);
-    }
-
-    if (dto.accountId !== undefined) {
-      const accountError = await this.findAccountError(
-        dto.accountId,
-        currentEmployee.id,
-      );
-      if (accountError) {
-        return accountError;
+    return this.withEmployeeAccess(id, async () => {
+      if (dto.accountId !== undefined && !this.isAdmin()) {
+        return ServiceResult.error(
+          ErrorCode.Forbidden,
+          'Недостаточно прав для изменения аккаунта сотрудника',
+        );
       }
-    }
 
-    const uniquenessError = await this.findUniquenessError(
-      {
-        pinfl: dto.pinfl,
-        employeeNumber: dto.employeeNumber,
-      },
-      id,
-    );
-
-    if (uniquenessError) {
-      return uniquenessError;
-    }
-
-    const locationError =
-      await findCityCountryMismatch<EmployeeDetailsResponseDto>(
-        this.prisma,
-        dto.countryId ?? currentEmployee.countryId,
-        dto.cityId ?? currentEmployee.cityId,
-      );
-    if (locationError) {
-      return locationError;
-    }
-
-    const birthDate = dto.birthDate ?? currentEmployee.birthDate;
-    const dateOrderError = findBirthDateOrderError<EmployeeDetailsResponseDto>({
-      birthDate,
-      hireDate: dto.hireDate ?? currentEmployee.hireDate,
-      passportExpireDate:
-        dto.passportExpireDate ?? currentEmployee.passportExpireDate,
-    });
-    if (dateOrderError) {
-      return dateOrderError;
-    }
-
-    if (dto.birthDate) {
-      const educations = await this.prisma.education.findMany({
-        where: { employeeId: id },
-        select: { graduationYear: true },
+      const currentEmployee = await this.prisma.employee.findFirst({
+        where: { id },
       });
-      for (const education of educations) {
-        const yearError =
-          findGraduationYearBeforeBirthError<EmployeeDetailsResponseDto>(
-            education.graduationYear,
-            birthDate,
-          );
-        if (yearError) {
-          return yearError;
+
+      if (!currentEmployee) {
+        return ServiceResult.error(
+          ErrorCode.NotFound,
+          ErrorMessage.employeeNotFound,
+        );
+      }
+
+      if (dto.accountId !== undefined) {
+        const accountError = await this.findAccountError(
+          dto.accountId,
+          currentEmployee.id,
+        );
+        if (accountError) {
+          return accountError;
         }
       }
 
-      const experiences = await this.prisma.workExperience.findMany({
-        where: { employeeId: id },
-        select: { startDate: true, endDate: true },
-      });
-      for (const experience of experiences) {
-        const experienceDateError =
-          findExperienceDatesBeforeBirthError<EmployeeDetailsResponseDto>({
-            birthDate,
-            startDate: experience.startDate,
-            endDate: experience.endDate,
-          });
-        if (experienceDateError) {
-          return experienceDateError;
+      const uniquenessError = await this.findUniquenessError(
+        {
+          pinfl: dto.pinfl,
+          employeeNumber: dto.employeeNumber,
+        },
+        id,
+      );
+
+      if (uniquenessError) {
+        return uniquenessError;
+      }
+
+      const locationError =
+        await findCityCountryMismatch<EmployeeDetailsResponseDto>(
+          this.prisma,
+          dto.countryId ?? currentEmployee.countryId,
+          dto.cityId ?? currentEmployee.cityId,
+        );
+      if (locationError) {
+        return locationError;
+      }
+
+      const birthDate = dto.birthDate ?? currentEmployee.birthDate;
+      const dateOrderError =
+        findBirthDateOrderError<EmployeeDetailsResponseDto>({
+          birthDate,
+          hireDate: dto.hireDate ?? currentEmployee.hireDate,
+          passportExpireDate:
+            dto.passportExpireDate ?? currentEmployee.passportExpireDate,
+        });
+      if (dateOrderError) {
+        return dateOrderError;
+      }
+
+      if (dto.birthDate) {
+        const educations = await this.prisma.education.findMany({
+          where: { employeeId: id },
+          select: { graduationYear: true },
+        });
+        for (const education of educations) {
+          const yearError =
+            findGraduationYearBeforeBirthError<EmployeeDetailsResponseDto>(
+              education.graduationYear,
+              birthDate,
+            );
+          if (yearError) {
+            return yearError;
+          }
+        }
+
+        const experiences = await this.prisma.workExperience.findMany({
+          where: { employeeId: id },
+          select: { startDate: true, endDate: true },
+        });
+        for (const experience of experiences) {
+          const experienceDateError =
+            findExperienceDatesBeforeBirthError<EmployeeDetailsResponseDto>({
+              birthDate,
+              startDate: experience.startDate,
+              endDate: experience.endDate,
+            });
+          if (experienceDateError) {
+            return experienceDateError;
+          }
         }
       }
-    }
 
-    const updated = await super.update(
-      id,
-      {
-        ...dto,
-        formStep: Math.max(
-          currentEmployee.formStep,
-          dto.formStep ?? currentEmployee.formStep,
-        ),
-      },
-      where,
-    );
+      const updated = await super.update(
+        id,
+        {
+          ...dto,
+          formStep: Math.max(
+            currentEmployee.formStep,
+            dto.formStep ?? currentEmployee.formStep,
+          ),
+        },
+        where,
+      );
 
-    if (!updated.successful) {
-      return updated;
-    }
+      if (!updated.successful) {
+        return updated;
+      }
 
-    await syncEmployeeExperience(this.prisma, id);
-    return this.getById(id, where);
+      await syncEmployeeExperience(this.prisma, id);
+      return this.getById(id, where);
+    });
   }
 
   // #endregion
 
   // #region PROTECTED METHODS
-
-  protected readonly notFoundMessage = 'Сотрудник не найден';
 
   protected getDelegate() {
     return this.prisma.employee;
@@ -457,7 +466,10 @@ export class EmployeesService extends BaseService<
     });
 
     if (!account) {
-      return ServiceResult.error(ErrorCode.NotFound, 'Аккаунт не найден');
+      return ServiceResult.error(
+        ErrorCode.NotFound,
+        ErrorMessage.accountNotFound,
+      );
     }
 
     if (account.role !== 'EMPLOYEE') {

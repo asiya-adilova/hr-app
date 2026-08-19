@@ -1,8 +1,8 @@
-import { BaseService } from './base.service';
+import { BaseService } from '../common/services/base.service';
 import {
   NamedReference,
   ReferenceResponseDto,
-} from '../dto/reference-response.dto';
+} from '../common/dto/reference-response.dto';
 
 export abstract class ReferenceService extends BaseService<
   NamedReference,

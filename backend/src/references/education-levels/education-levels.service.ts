@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ReferenceService } from '../../common/services/reference.service';
+import { ReferenceService } from '../reference.service';
 
 @Injectable()
 export class EducationLevelsService extends ReferenceService {
@@ -9,8 +9,6 @@ export class EducationLevelsService extends ReferenceService {
   }
 
   // #region PROTECTED METHODS
-
-  protected readonly notFoundMessage = 'Уровень образования не найден';
 
   protected getDelegate() {
     return this.prisma.educationLevel;

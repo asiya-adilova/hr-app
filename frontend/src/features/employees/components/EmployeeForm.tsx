@@ -35,6 +35,12 @@ import { EducationCard, type EducationCardItem } from './EducationCard.tsx';
 import { ExperienceCard, type ExperienceCardItem } from './ExperienceCard.tsx';
 import { RelativeCard, type RelativeCardItem } from './RelativeCard.tsx';
 import { CountryCityFields } from './CountryCityFields.tsx';
+import {
+  emptyEducation,
+  emptyExperience,
+  emptyRelative,
+  nextItemKey,
+} from '../helpers/form-items.ts';
 
 const steps = [
   { title: 'Контакты', hint: 'Личные и паспортные данные' },
@@ -91,53 +97,6 @@ type EmployeeFormProps = {
   }) => Promise<boolean | void>;
   onComplete?: () => void;
 };
-
-function nextItemKey() {
-  return `item-${crypto.randomUUID()}`;
-}
-
-function emptyEducation(): EducationCardItem {
-  return {
-    key: nextItemKey(),
-    institutionName: '',
-    specialty: '',
-    educationLevelId: '',
-    countryId: '',
-    cityId: '',
-    graduationYear: new Date().getFullYear(),
-    view: false,
-    expanded: false,
-  };
-}
-
-function emptyExperience(): ExperienceCardItem {
-  return {
-    key: nextItemKey(),
-    companyName: '',
-    positionId: '',
-    countryId: '',
-    cityId: '',
-    startDate: '',
-    endDate: '',
-    isCurrent: false,
-    responsibilities: '',
-    view: false,
-    expanded: false,
-  };
-}
-
-function emptyRelative(): RelativeCardItem {
-  return {
-    key: nextItemKey(),
-    fullName: '',
-    relationshipType: '',
-    occupation: '',
-    birthDate: '',
-    phone: '',
-    view: false,
-    expanded: false,
-  };
-}
 
 const DUPLICATE_EXPERIENCE_MESSAGE =
   'Нельзя указать один и тот же опыт работы несколько раз';
@@ -1416,7 +1375,7 @@ export function EmployeeForm({
           <Button
             type="button"
             variant="secondary"
-            onClick={() => setField('educations', [...values.educations, emptyEducation()])}
+            onClick={() => setField('educations', [...values.educations, emptyEducation(false)])}
           >
             Добавить образование
           </Button>
@@ -1452,7 +1411,7 @@ export function EmployeeForm({
             type="button"
             variant="secondary"
             onClick={() =>
-              setField('workExperiences', [...values.workExperiences, emptyExperience()])
+              setField('workExperiences', [...values.workExperiences, emptyExperience(false)])
             }
           >
             Добавить опыт работы
@@ -1526,7 +1485,7 @@ export function EmployeeForm({
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setField('relatives', [...values.relatives, emptyRelative()])}
+              onClick={() => setField('relatives', [...values.relatives, emptyRelative(false)])}
             >
               Добавить родственника
             </Button>

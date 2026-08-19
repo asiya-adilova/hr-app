@@ -16,6 +16,9 @@ import type { CreateEmployeePayload, EmployeeDetails } from '../types/employee.t
 import type { EducationCardItem } from '../components/EducationCard.tsx';
 import type { ExperienceCardItem } from '../components/ExperienceCard.tsx';
 import type { RelativeCardItem } from '../components/RelativeCard.tsx';
+import {
+  nextItemKey,
+} from './form-items.ts';
 
 export type AdminFormValues = {
   birthDate: string;
@@ -45,53 +48,6 @@ export type AdminFormValues = {
   workExperiences: ExperienceCardItem[];
   relatives: RelativeCardItem[];
 };
-
-function nextItemKey() {
-  return `item-${crypto.randomUUID()}`;
-}
-
-export function emptyEducation(): EducationCardItem {
-  return {
-    key: nextItemKey(),
-    institutionName: '',
-    specialty: '',
-    educationLevelId: '',
-    countryId: '',
-    cityId: '',
-    graduationYear: new Date().getFullYear(),
-    view: false,
-    expanded: true,
-  };
-}
-
-export function emptyExperience(): ExperienceCardItem {
-  return {
-    key: nextItemKey(),
-    companyName: '',
-    positionId: '',
-    countryId: '',
-    cityId: '',
-    startDate: '',
-    endDate: '',
-    isCurrent: false,
-    responsibilities: '',
-    view: false,
-    expanded: true,
-  };
-}
-
-export function emptyRelative(): RelativeCardItem {
-  return {
-    key: nextItemKey(),
-    fullName: '',
-    relationshipType: '',
-    occupation: '',
-    birthDate: '',
-    phone: '',
-    view: false,
-    expanded: true,
-  };
-}
 
 export function fromEmployee(employee: EmployeeDetails): AdminFormValues {
   return {

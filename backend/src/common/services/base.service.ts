@@ -1,6 +1,7 @@
 import { PrismaService } from '../../prisma/prisma.service';
 import { ErrorCode } from '../enums/error-code.enum';
 import { Role } from '../enums/role.enum';
+import { ErrorMessage } from '../messages/error-message';
 import { PagedResult } from '../response/paged-result';
 import { ServiceResult } from '../response/service-result';
 import { getCurrentUser } from '../../security/current-user.store';
@@ -36,7 +37,7 @@ export abstract class BaseService<
     });
 
     if (!model) {
-      return ServiceResult.error(ErrorCode.NotFound, this.notFoundMessage);
+      return ServiceResult.error(ErrorCode.NotFound, ErrorMessage.notFound);
     }
 
     return ServiceResult.success(this.toResponse(model));
@@ -123,7 +124,7 @@ export abstract class BaseService<
     });
 
     if (!existing) {
-      return ServiceResult.error(ErrorCode.NotFound, this.notFoundMessage);
+      return ServiceResult.error(ErrorCode.NotFound, ErrorMessage.notFound);
     }
 
     await this.getDelegate().update({
@@ -143,7 +144,7 @@ export abstract class BaseService<
     });
 
     if (!existing) {
-      return ServiceResult.error(ErrorCode.NotFound, this.notFoundMessage);
+      return ServiceResult.error(ErrorCode.NotFound, ErrorMessage.notFound);
     }
 
     await this.getDelegate().update({
@@ -160,8 +161,6 @@ export abstract class BaseService<
   // #endregion
 
   // #region PROTECTED METHODS
-
-  protected abstract readonly notFoundMessage: string;
 
   protected abstract getDelegate(): any;
 
@@ -210,7 +209,41 @@ export abstract class BaseService<
     return objectOwnerId === currentUserId;
   }
 
-  protected async canAccessEmployee(employeeId: number): Promise<boolean> {
+  protected async withEmployeeAccess<T>(
+    employeeId: number,
+    action: () => Promise<ServiceResult<T>>,
+  ): Promise<ServiceResult<T>> {
+    const denied = await this.forbiddenUnlessEmployeeOwner<T>(employeeId);
+    if (denied) {
+      return denied;
+    }
+
+    return action();
+  }
+
+  protected async ensureEmployeeExists<T>(
+    employeeId: number,
+  ): Promise<ServiceResult<T> | null> {
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: employeeId },
+      select: { id: true },
+    });
+
+    if (employee) {
+      return null;
+    }
+
+    return ServiceResult.error(
+      ErrorCode.NotFound,
+      ErrorMessage.employeeNotFound,
+    );
+  }
+
+  // #endregion
+
+  // #region PRIVATE HELPERS
+
+  private async canAccessEmployee(employeeId: number): Promise<boolean> {
     const user = this.getCurrentUser();
     if (this.isAdmin() || this.isOwner(employeeId, user.employeeId)) {
       return true;
@@ -229,7 +262,7 @@ export abstract class BaseService<
     return employee != null;
   }
 
-  protected async forbiddenUnlessEmployeeOwner<T>(
+  private async forbiddenUnlessEmployeeOwner<T>(
     employeeId: number,
   ): Promise<ServiceResult<T> | null> {
     if (await this.canAccessEmployee(employeeId)) {
@@ -238,20 +271,8 @@ export abstract class BaseService<
 
     return ServiceResult.error(
       ErrorCode.Forbidden,
-      'Недостаточно прав для доступа к данным этого сотрудника',
+      ErrorMessage.employeeAccessDenied,
     );
-  }
-
-  protected async withEmployeeAccess<T>(
-    employeeId: number,
-    action: () => Promise<ServiceResult<T>>,
-  ): Promise<ServiceResult<T>> {
-    const denied = await this.forbiddenUnlessEmployeeOwner<T>(employeeId);
-    if (denied) {
-      return denied;
-    }
-
-    return action();
   }
 
   // #endregion

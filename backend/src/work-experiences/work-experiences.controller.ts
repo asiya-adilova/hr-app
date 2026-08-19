@@ -32,7 +32,7 @@ export class WorkExperiencesController {
   @ApiDataResponse(WorkExperienceResponseDto, { isArray: true })
   async getAll(@Param('employeeId', ParseIntPipe) employeeId: number) {
     const result =
-      await this.workExperiencesService.listByEmployee(employeeId);
+      await this.workExperiencesService.getAllByEmployeeId(employeeId);
 
     return toApiResponse(result);
   }
@@ -46,7 +46,9 @@ export class WorkExperiencesController {
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    const result = await this.workExperiencesService.getOne(employeeId, id);
+    const result = await this.workExperiencesService.getById(id, {
+      employeeId,
+    });
 
     return toApiResponse(result);
   }
@@ -60,7 +62,7 @@ export class WorkExperiencesController {
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Body() dto: CreateWorkExperienceDto,
   ) {
-    const result = await this.workExperiencesService.add(employeeId, dto);
+    const result = await this.workExperiencesService.create(dto, { employeeId });
 
     return toApiResponse(result);
   }
@@ -108,7 +110,7 @@ export class WorkExperiencesController {
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    const result = await this.workExperiencesService.remove(employeeId, id);
+    const result = await this.workExperiencesService.delete(id, { employeeId });
 
     return toApiResponse(result);
   }

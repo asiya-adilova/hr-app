@@ -29,7 +29,7 @@ export class EducationsController {
   @ApiParam({ name: 'employeeId', type: Number })
   @ApiDataResponse(EducationResponseDto, { isArray: true })
   async getAll(@Param('employeeId', ParseIntPipe) employeeId: number) {
-    const result = await this.educationsService.listByEmployee(employeeId);
+    const result = await this.educationsService.getAllByEmployeeId(employeeId);
 
     return toApiResponse(result);
   }
@@ -43,7 +43,7 @@ export class EducationsController {
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    const result = await this.educationsService.getOne(employeeId, id);
+    const result = await this.educationsService.getById(id, { employeeId });
 
     return toApiResponse(result);
   }
@@ -57,7 +57,7 @@ export class EducationsController {
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Body() dto: CreateEducationDto,
   ) {
-    const result = await this.educationsService.add(employeeId, dto);
+    const result = await this.educationsService.create(dto, { employeeId });
 
     return toApiResponse(result);
   }
@@ -103,7 +103,7 @@ export class EducationsController {
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    const result = await this.educationsService.remove(employeeId, id);
+    const result = await this.educationsService.delete(id, { employeeId });
 
     return toApiResponse(result);
   }

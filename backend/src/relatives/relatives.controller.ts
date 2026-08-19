@@ -28,7 +28,7 @@ export class RelativesController {
   @ApiParam({ name: 'employeeId', type: Number })
   @ApiDataResponse(RelativeResponseDto, { isArray: true })
   async getAll(@Param('employeeId', ParseIntPipe) employeeId: number) {
-    const result = await this.relativesService.listByEmployee(employeeId);
+    const result = await this.relativesService.getAllByEmployeeId(employeeId);
 
     return toApiResponse(result);
   }
@@ -42,7 +42,7 @@ export class RelativesController {
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    const result = await this.relativesService.getOne(employeeId, id);
+    const result = await this.relativesService.getById(id, { employeeId });
 
     return toApiResponse(result);
   }
@@ -56,7 +56,7 @@ export class RelativesController {
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Body() dto: CreateRelativeDto,
   ) {
-    const result = await this.relativesService.add(employeeId, dto);
+    const result = await this.relativesService.create(dto, { employeeId });
 
     return toApiResponse(result);
   }
@@ -85,7 +85,7 @@ export class RelativesController {
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    const result = await this.relativesService.remove(employeeId, id);
+    const result = await this.relativesService.delete(id, { employeeId });
 
     return toApiResponse(result);
   }

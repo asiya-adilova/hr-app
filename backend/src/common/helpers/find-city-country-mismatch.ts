@@ -1,5 +1,6 @@
 import { PrismaService } from '../../prisma/prisma.service';
 import { ErrorCode } from '../enums/error-code.enum';
+import { ErrorMessage } from '../messages/error-message';
 import { ServiceResult } from '../response/service-result';
 
 export async function findCityCountryMismatch<T>(
@@ -16,13 +17,13 @@ export async function findCityCountryMismatch<T>(
   });
 
   if (!city) {
-    return ServiceResult.error(ErrorCode.NotFound, 'Город не найден');
+    return ServiceResult.error(ErrorCode.NotFound, ErrorMessage.cityNotFound);
   }
 
   if (city.countryId !== countryId) {
     return ServiceResult.error(
       ErrorCode.BadRequest,
-      'Город не относится к выбранной стране',
+      ErrorMessage.cityCountryMismatch,
     );
   }
 

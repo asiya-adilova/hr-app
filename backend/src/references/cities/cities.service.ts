@@ -17,8 +17,6 @@ export class CitiesService extends BaseService<CityRecord, CityResponseDto> {
 
   // #region PROTECTED METHODS
 
-  protected readonly notFoundMessage = 'Город не найден';
-
   protected getDelegate() {
     return this.prisma.city;
   }

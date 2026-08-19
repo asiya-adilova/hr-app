@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { ServiceResult } from '../common/response/service-result';
+import { ErrorMessage } from '../common/messages/error-message';
 import { BaseService } from '../common/services/base.service';
-import { ensureEmployeeExists } from '../common/helpers/ensure-employee-exists';
 import { EmployeeMapper } from '../employees/mappings/employee-mapper';
 import { WorkExperienceResponseDto } from './dto/response/work-experience-response.dto';
 import { CreateWorkExperienceDto } from './dto/request/create-work-experience-request.dto';
@@ -11,7 +11,10 @@ import { UpdateWorkExperienceDto } from './dto/request/update-work-experience-re
 import type { WorkExperience } from '../../generated/prisma/client';
 import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
 import { findCityCountryMismatch } from '../common/helpers/find-city-country-mismatch';
-import { findExperienceDatesBeforeBirthError } from '../common/helpers/find-birth-date-order-error';
+import {
+  findExperienceDatesBeforeBirthError,
+  getEmployeeBirthDate,
+} from '../common/helpers/find-birth-date-order-error';
 
 @Injectable()
 export class WorkExperiencesService extends BaseService<
@@ -26,14 +29,7 @@ export class WorkExperiencesService extends BaseService<
 
   // #region PUBLIC API (CONTROLLER ENDPOINTS)
 
-  async findByEmployeeId(
-    employeeId: number,
-  ): Promise<WorkExperienceResponseDto[]> {
-    const result = await this.getAll({ employeeId });
-    return result.result ?? [];
-  }
-
-  async listByEmployee(
+  getAllByEmployeeId(
     employeeId: number,
   ): Promise<ServiceResult<WorkExperienceResponseDto[]>> {
     return this.withEmployeeAccess(employeeId, () =>
@@ -41,22 +37,12 @@ export class WorkExperiencesService extends BaseService<
     );
   }
 
-  async getOne(
-    employeeId: number,
+  override async getById(
     id: number,
+    where: Record<string, unknown> = {},
   ): Promise<ServiceResult<WorkExperienceResponseDto>> {
-    return this.withEmployeeAccess(employeeId, () =>
-      super.getById(id, { employeeId }),
-    );
-  }
-
-  async add(
-    employeeId: number,
-    dto: CreateWorkExperienceDto,
-  ): Promise<ServiceResult<WorkExperienceResponseDto>> {
-    return this.withEmployeeAccess(employeeId, () =>
-      this.create(dto, { employeeId }),
-    );
+    const employeeId = where.employeeId as number;
+    return this.withEmployeeAccess(employeeId, () => super.getById(id, where));
   }
 
   override async create(
@@ -64,50 +50,50 @@ export class WorkExperiencesService extends BaseService<
     extra: Record<string, unknown> = {},
   ): Promise<ServiceResult<WorkExperienceResponseDto>> {
     const employeeId = extra.employeeId as number;
-    const employee = await ensureEmployeeExists(this.prisma, employeeId);
-    if (!employee.successful) {
-      return ServiceResult.error(
-        employee.errorInfo?.code ?? ErrorCode.NotFound,
-        employee.errorInfo?.message ?? 'Сотрудник не найден',
-      );
-    }
+    return this.withEmployeeAccess(employeeId, async () => {
+      const missing =
+        await this.ensureEmployeeExists<WorkExperienceResponseDto>(employeeId);
+      if (missing) {
+        return missing;
+      }
 
-    const dateOrderError =
-      findExperienceDatesBeforeBirthError<WorkExperienceResponseDto>({
-        birthDate: await this.getEmployeeBirthDate(employeeId),
-        startDate: dto.startDate,
-        endDate: dto.isCurrent ? undefined : dto.endDate,
+      const dateOrderError =
+        findExperienceDatesBeforeBirthError<WorkExperienceResponseDto>({
+          birthDate: await getEmployeeBirthDate(this.prisma, employeeId),
+          startDate: dto.startDate,
+          endDate: dto.isCurrent ? undefined : dto.endDate,
+        });
+      if (dateOrderError) {
+        return dateOrderError;
+      }
+
+      const uniquenessError = await this.findUniquenessError(employeeId, {
+        companyName: dto.companyName,
+        positionId: dto.positionId,
+        startDate: new Date(dto.startDate),
+        endDate: dto.isCurrent || !dto.endDate ? null : new Date(dto.endDate),
       });
-    if (dateOrderError) {
-      return dateOrderError;
-    }
 
-    const uniquenessError = await this.findUniquenessError(employeeId, {
-      companyName: dto.companyName,
-      positionId: dto.positionId,
-      startDate: new Date(dto.startDate),
-      endDate: dto.isCurrent || !dto.endDate ? null : new Date(dto.endDate),
+      if (uniquenessError) {
+        return uniquenessError;
+      }
+
+      const locationError =
+        await findCityCountryMismatch<WorkExperienceResponseDto>(
+          this.prisma,
+          dto.countryId,
+          dto.cityId,
+        );
+      if (locationError) {
+        return locationError;
+      }
+
+      const created = await super.create(dto, extra);
+      if (created.successful) {
+        await syncEmployeeExperience(this.prisma, employeeId);
+      }
+      return created;
     });
-
-    if (uniquenessError) {
-      return uniquenessError;
-    }
-
-    const locationError =
-      await findCityCountryMismatch<WorkExperienceResponseDto>(
-        this.prisma,
-        dto.countryId,
-        dto.cityId,
-      );
-    if (locationError) {
-      return locationError;
-    }
-
-    const created = await super.create(dto, extra);
-    if (created.successful) {
-      await syncEmployeeExperience(this.prisma, employeeId);
-    }
-    return created;
   }
 
   override async update(
@@ -116,68 +102,66 @@ export class WorkExperiencesService extends BaseService<
     where: Record<string, unknown> = {},
   ): Promise<ServiceResult<WorkExperienceResponseDto>> {
     const employeeId = where.employeeId as number;
-    const denied =
-      await this.forbiddenUnlessEmployeeOwner<WorkExperienceResponseDto>(
-        employeeId,
-      );
-    if (denied) {
-      return denied;
-    }
-    const existing = await this.prisma.workExperience.findFirst({
-      where: { id, employeeId },
-    });
-
-    if (!existing) {
-      return ServiceResult.error(ErrorCode.NotFound, this.notFoundMessage);
-    }
-
-    const isCurrent = dto.isCurrent ?? (existing.endDate == null);
-    const dateOrderError =
-      findExperienceDatesBeforeBirthError<WorkExperienceResponseDto>({
-        birthDate: await this.getEmployeeBirthDate(employeeId),
-        startDate: dto.startDate ?? existing.startDate,
-        endDate: isCurrent
-          ? undefined
-          : (dto.endDate ?? existing.endDate),
+    return this.withEmployeeAccess(employeeId, async () => {
+      const existing = await this.prisma.workExperience.findFirst({
+        where: { id, employeeId },
       });
-    if (dateOrderError) {
-      return dateOrderError;
-    }
 
-    const uniquenessError = await this.findUniquenessError(
-      employeeId,
-      {
-        companyName: dto.companyName ?? existing.companyName,
-        positionId: dto.positionId ?? existing.positionId,
-        startDate: dto.startDate ? new Date(dto.startDate) : existing.startDate,
-        endDate: dto.isCurrent
-          ? null
-          : dto.endDate
-            ? new Date(dto.endDate)
-            : existing.endDate,
-      },
-      id,
-    );
+      if (!existing) {
+        return ServiceResult.error(
+          ErrorCode.NotFound,
+          ErrorMessage.workExperienceNotFound,
+        );
+      }
 
-    if (uniquenessError) {
-      return uniquenessError;
-    }
+      const isCurrent = dto.isCurrent ?? existing.endDate == null;
+      const dateOrderError =
+        findExperienceDatesBeforeBirthError<WorkExperienceResponseDto>({
+          birthDate: await getEmployeeBirthDate(this.prisma, employeeId),
+          startDate: dto.startDate ?? existing.startDate,
+          endDate: isCurrent ? undefined : (dto.endDate ?? existing.endDate),
+        });
+      if (dateOrderError) {
+        return dateOrderError;
+      }
 
-    const locationError =
-      await findCityCountryMismatch<WorkExperienceResponseDto>(
-        this.prisma,
-        dto.countryId ?? existing.countryId,
-        dto.cityId ?? existing.cityId,
+      const uniquenessError = await this.findUniquenessError(
+        employeeId,
+        {
+          companyName: dto.companyName ?? existing.companyName,
+          positionId: dto.positionId ?? existing.positionId,
+          startDate: dto.startDate
+            ? new Date(dto.startDate)
+            : existing.startDate,
+          endDate: dto.isCurrent
+            ? null
+            : dto.endDate
+              ? new Date(dto.endDate)
+              : existing.endDate,
+        },
+        id,
       );
-    if (locationError) {
-      return locationError;
-    }
 
-    const updated = await super.update(id, dto, where);
-    if (updated.successful) {
-      await syncEmployeeExperience(this.prisma, employeeId);
-    }
-    return updated;
+      if (uniquenessError) {
+        return uniquenessError;
+      }
+
+      const locationError =
+        await findCityCountryMismatch<WorkExperienceResponseDto>(
+          this.prisma,
+          dto.countryId ?? existing.countryId,
+          dto.cityId ?? existing.cityId,
+        );
+      if (locationError) {
+        return locationError;
+      }
+
+      const updated = await super.update(id, dto, where);
+      if (updated.successful) {
+        await syncEmployeeExperience(this.prisma, employeeId);
+      }
+      return updated;
+    });
   }
 
   async replaceAll(
@@ -207,18 +191,18 @@ export class WorkExperiencesService extends BaseService<
         }
       }
 
-      const experiences = await this.findByEmployeeId(employeeId);
       await syncEmployeeExperience(this.prisma, employeeId);
-      return ServiceResult.success(experiences);
+      return this.getAllByEmployeeId(employeeId);
     });
   }
 
-  async remove(
-    employeeId: number,
+  override async delete(
     id: number,
+    where: Record<string, unknown> = {},
   ): Promise<ServiceResult<void>> {
+    const employeeId = where.employeeId as number;
     return this.withEmployeeAccess(employeeId, async () => {
-      const removed = await super.delete(id, { employeeId });
+      const removed = await super.delete(id, where);
       if (removed.successful) {
         await syncEmployeeExperience(this.prisma, employeeId);
       }
@@ -229,8 +213,6 @@ export class WorkExperiencesService extends BaseService<
   // #endregion
 
   // #region PROTECTED METHODS
-
-  protected readonly notFoundMessage = 'Запись об опыте работы не найдена';
 
   protected getDelegate() {
     return this.prisma.workExperience;
@@ -253,42 +235,12 @@ export class WorkExperiencesService extends BaseService<
   }
 
   protected toUpdateData(dto: UpdateWorkExperienceDto) {
-    return {
-      ...(dto.companyName !== undefined && { companyName: dto.companyName }),
-      ...(dto.positionId !== undefined && { positionId: dto.positionId }),
-      ...(dto.countryId !== undefined && { countryId: dto.countryId }),
-      ...(dto.cityId !== undefined && { cityId: dto.cityId }),
-      ...(dto.startDate !== undefined && {
-        startDate: new Date(dto.startDate),
-      }),
-      ...(dto.isCurrent !== undefined || dto.endDate !== undefined
-        ? {
-            endDate: dto.isCurrent
-              ? null
-              : dto.endDate
-                ? new Date(dto.endDate)
-                : null,
-          }
-        : {}),
-      ...(dto.responsibilities !== undefined && {
-        responsibilities: dto.responsibilities,
-      }),
-    };
+    return EmployeeMapper.toWorkExperienceUpdateData(dto);
   }
 
   // #endregion
 
   // #region PRIVATE HELPERS
-
-  private async getEmployeeBirthDate(
-    employeeId: number,
-  ): Promise<Date | undefined> {
-    const employee = await this.prisma.employee.findFirst({
-      where: { id: employeeId },
-      select: { birthDate: true },
-    });
-    return employee?.birthDate;
-  }
 
   private async findUniquenessError(
     employeeId: number,
@@ -397,7 +349,10 @@ function hasOverlappingWorkExperiences(items: CreateWorkExperienceDto[]) {
     for (let second = first + 1; second < items.length; second += 1) {
       if (
         isSameWorkExperienceRole(items[first], items[second]) &&
-        periodsOverlap(experienceRange(items[first]), experienceRange(items[second]))
+        periodsOverlap(
+          experienceRange(items[first]),
+          experienceRange(items[second]),
+        )
       ) {
         return true;
       }

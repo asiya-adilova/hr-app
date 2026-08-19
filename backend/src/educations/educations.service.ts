@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { ServiceResult } from '../common/response/service-result';
+import { ErrorMessage } from '../common/messages/error-message';
 import { BaseService } from '../common/services/base.service';
-import { ensureEmployeeExists } from '../common/helpers/ensure-employee-exists';
 import { EmployeeMapper } from '../employees/mappings/employee-mapper';
 import { EducationResponseDto } from './dto/response/education-response.dto';
 import { CreateEducationDto } from './dto/request/create-education-request.dto';
@@ -11,7 +11,10 @@ import { UpdateEducationDto } from './dto/request/update-education-request.dto';
 import type { Education } from '../../generated/prisma/client';
 import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
 import { findCityCountryMismatch } from '../common/helpers/find-city-country-mismatch';
-import { findGraduationYearBeforeBirthError } from '../common/helpers/find-birth-date-order-error';
+import {
+  findGraduationYearBeforeBirthError,
+  getEmployeeBirthDate,
+} from '../common/helpers/find-birth-date-order-error';
 
 @Injectable()
 export class EducationsService extends BaseService<
@@ -26,12 +29,7 @@ export class EducationsService extends BaseService<
 
   // #region PUBLIC API (CONTROLLER ENDPOINTS)
 
-  async findByEmployeeId(employeeId: number): Promise<EducationResponseDto[]> {
-    const result = await this.getAll({ employeeId });
-    return result.result ?? [];
-  }
-
-  listByEmployee(
+  getAllByEmployeeId(
     employeeId: number,
   ): Promise<ServiceResult<EducationResponseDto[]>> {
     return this.withEmployeeAccess(employeeId, () =>
@@ -39,22 +37,12 @@ export class EducationsService extends BaseService<
     );
   }
 
-  getOne(
-    employeeId: number,
+  override async getById(
     id: number,
+    where: Record<string, unknown> = {},
   ): Promise<ServiceResult<EducationResponseDto>> {
-    return this.withEmployeeAccess(employeeId, () =>
-      super.getById(id, { employeeId }),
-    );
-  }
-
-  add(
-    employeeId: number,
-    dto: CreateEducationDto,
-  ): Promise<ServiceResult<EducationResponseDto>> {
-    return this.withEmployeeAccess(employeeId, () =>
-      this.create(dto, { employeeId }),
-    );
+    const employeeId = where.employeeId as number;
+    return this.withEmployeeAccess(employeeId, () => super.getById(id, where));
   }
 
   override async create(
@@ -62,47 +50,48 @@ export class EducationsService extends BaseService<
     extra: Record<string, unknown> = {},
   ): Promise<ServiceResult<EducationResponseDto>> {
     const employeeId = extra.employeeId as number;
-    const employee = await ensureEmployeeExists(this.prisma, employeeId);
-    if (!employee.successful) {
-      return ServiceResult.error(
-        employee.errorInfo?.code ?? ErrorCode.NotFound,
-        employee.errorInfo?.message ?? 'Сотрудник не найден',
+    return this.withEmployeeAccess(employeeId, async () => {
+      const missing =
+        await this.ensureEmployeeExists<EducationResponseDto>(employeeId);
+      if (missing) {
+        return missing;
+      }
+
+      const yearError =
+        findGraduationYearBeforeBirthError<EducationResponseDto>(
+          dto.graduationYear,
+          await getEmployeeBirthDate(this.prisma, employeeId),
+        );
+      if (yearError) {
+        return yearError;
+      }
+
+      const uniquenessError = await this.findUniquenessError(employeeId, {
+        institution: dto.institutionName,
+        specialty: dto.specialty,
+        educationLevelId: dto.educationLevelId,
+        graduationYear: dto.graduationYear,
+      });
+
+      if (uniquenessError) {
+        return uniquenessError;
+      }
+
+      const locationError = await findCityCountryMismatch<EducationResponseDto>(
+        this.prisma,
+        dto.countryId,
+        dto.cityId,
       );
-    }
+      if (locationError) {
+        return locationError;
+      }
 
-    const yearError = findGraduationYearBeforeBirthError<EducationResponseDto>(
-      dto.graduationYear,
-      await this.getEmployeeBirthDate(employeeId),
-    );
-    if (yearError) {
-      return yearError;
-    }
-
-    const uniquenessError = await this.findUniquenessError(employeeId, {
-      institution: dto.institutionName,
-      specialty: dto.specialty,
-      educationLevelId: dto.educationLevelId,
-      graduationYear: dto.graduationYear,
+      const created = await super.create(dto, extra);
+      if (created.successful) {
+        await syncEmployeeExperience(this.prisma, employeeId);
+      }
+      return created;
     });
-
-    if (uniquenessError) {
-      return uniquenessError;
-    }
-
-    const locationError = await findCityCountryMismatch<EducationResponseDto>(
-      this.prisma,
-      dto.countryId,
-      dto.cityId,
-    );
-    if (locationError) {
-      return locationError;
-    }
-
-    const created = await super.create(dto, extra);
-    if (created.successful) {
-      await syncEmployeeExperience(this.prisma, employeeId);
-    }
-    return created;
   }
 
   override async update(
@@ -111,56 +100,57 @@ export class EducationsService extends BaseService<
     where: Record<string, unknown> = {},
   ): Promise<ServiceResult<EducationResponseDto>> {
     const employeeId = where.employeeId as number;
-    const denied =
-      await this.forbiddenUnlessEmployeeOwner<EducationResponseDto>(employeeId);
-    if (denied) {
-      return denied;
-    }
-    const existing = await this.prisma.education.findFirst({
-      where: { id, employeeId },
+    return this.withEmployeeAccess(employeeId, async () => {
+      const existing = await this.prisma.education.findFirst({
+        where: { id, employeeId },
+      });
+
+      if (!existing) {
+        return ServiceResult.error(
+          ErrorCode.NotFound,
+          ErrorMessage.educationNotFound,
+        );
+      }
+
+      const yearError =
+        findGraduationYearBeforeBirthError<EducationResponseDto>(
+          dto.graduationYear ?? existing.graduationYear,
+          await getEmployeeBirthDate(this.prisma, employeeId),
+        );
+      if (yearError) {
+        return yearError;
+      }
+
+      const uniquenessError = await this.findUniquenessError(
+        employeeId,
+        {
+          institution: dto.institutionName ?? existing.institution,
+          specialty: dto.specialty ?? existing.specialty,
+          educationLevelId: dto.educationLevelId ?? existing.educationLevelId,
+          graduationYear: dto.graduationYear ?? existing.graduationYear,
+        },
+        id,
+      );
+
+      if (uniquenessError) {
+        return uniquenessError;
+      }
+
+      const locationError = await findCityCountryMismatch<EducationResponseDto>(
+        this.prisma,
+        dto.countryId ?? existing.countryId,
+        dto.cityId ?? existing.cityId,
+      );
+      if (locationError) {
+        return locationError;
+      }
+
+      const updated = await super.update(id, dto, where);
+      if (updated.successful) {
+        await syncEmployeeExperience(this.prisma, employeeId);
+      }
+      return updated;
     });
-
-    if (!existing) {
-      return ServiceResult.error(ErrorCode.NotFound, this.notFoundMessage);
-    }
-
-    const yearError = findGraduationYearBeforeBirthError<EducationResponseDto>(
-      dto.graduationYear ?? existing.graduationYear,
-      await this.getEmployeeBirthDate(employeeId),
-    );
-    if (yearError) {
-      return yearError;
-    }
-
-    const uniquenessError = await this.findUniquenessError(
-      employeeId,
-      {
-        institution: dto.institutionName ?? existing.institution,
-        specialty: dto.specialty ?? existing.specialty,
-        educationLevelId: dto.educationLevelId ?? existing.educationLevelId,
-        graduationYear: dto.graduationYear ?? existing.graduationYear,
-      },
-      id,
-    );
-
-    if (uniquenessError) {
-      return uniquenessError;
-    }
-
-    const locationError = await findCityCountryMismatch<EducationResponseDto>(
-      this.prisma,
-      dto.countryId ?? existing.countryId,
-      dto.cityId ?? existing.cityId,
-    );
-    if (locationError) {
-      return locationError;
-    }
-
-    const updated = await super.update(id, dto, where);
-    if (updated.successful) {
-      await syncEmployeeExperience(this.prisma, employeeId);
-    }
-    return updated;
   }
 
   async replaceAll(
@@ -183,15 +173,19 @@ export class EducationsService extends BaseService<
         }
       }
 
-      const educations = await this.findByEmployeeId(employeeId);
       await syncEmployeeExperience(this.prisma, employeeId);
-      return ServiceResult.success(educations);
+
+      return this.getAllByEmployeeId(employeeId);
     });
   }
 
-  remove(employeeId: number, id: number): Promise<ServiceResult<void>> {
+  override async delete(
+    id: number,
+    where: Record<string, unknown> = {},
+  ): Promise<ServiceResult<void>> {
+    const employeeId = where.employeeId as number;
     return this.withEmployeeAccess(employeeId, async () => {
-      const removed = await super.delete(id, { employeeId });
+      const removed = await super.delete(id, where);
       if (removed.successful) {
         await syncEmployeeExperience(this.prisma, employeeId);
       }
@@ -202,8 +196,6 @@ export class EducationsService extends BaseService<
   // #endregion
 
   // #region PROTECTED METHODS
-
-  protected readonly notFoundMessage = 'Запись об образовании не найдена';
 
   protected getDelegate() {
     return this.prisma.education;
@@ -226,35 +218,12 @@ export class EducationsService extends BaseService<
   }
 
   protected toUpdateData(dto: UpdateEducationDto) {
-    return {
-      ...(dto.institutionName !== undefined && {
-        institution: dto.institutionName,
-      }),
-      ...(dto.specialty !== undefined && { specialty: dto.specialty }),
-      ...(dto.educationLevelId !== undefined && {
-        educationLevelId: dto.educationLevelId,
-      }),
-      ...(dto.countryId !== undefined && { countryId: dto.countryId }),
-      ...(dto.cityId !== undefined && { cityId: dto.cityId }),
-      ...(dto.graduationYear !== undefined && {
-        graduationYear: dto.graduationYear,
-      }),
-    };
+    return EmployeeMapper.toEducationUpdateData(dto);
   }
 
   // #endregion
 
   // #region PRIVATE HELPERS
-
-  private async getEmployeeBirthDate(
-    employeeId: number,
-  ): Promise<Date | undefined> {
-    const employee = await this.prisma.employee.findFirst({
-      where: { id: employeeId },
-      select: { birthDate: true },
-    });
-    return employee?.birthDate;
-  }
 
   private async findUniquenessError(
     employeeId: number,

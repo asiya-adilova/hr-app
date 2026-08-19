@@ -1,6 +1,18 @@
+import { PrismaService } from '../../prisma/prisma.service';
 import { ErrorCode } from '../enums/error-code.enum';
 import { ServiceResult } from '../response/service-result';
 import { isDateBefore, yearFromDate } from '../validators/date.validators';
+
+export async function getEmployeeBirthDate(
+  prisma: PrismaService,
+  employeeId: number,
+): Promise<Date | undefined> {
+  const employee = await prisma.employee.findFirst({
+    where: { id: employeeId },
+    select: { birthDate: true },
+  });
+  return employee?.birthDate;
+}
 
 export function findBirthDateOrderError<T>(dates: {
   birthDate?: Date | string | null;

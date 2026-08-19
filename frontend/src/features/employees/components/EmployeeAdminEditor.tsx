@@ -24,9 +24,6 @@ import {
   collectJobErrors,
   collectPersonalErrors,
   educationPayload,
-  emptyEducation,
-  emptyExperience,
-  emptyRelative,
   experiencePayload,
   fromEmployee,
   jobPayload,
@@ -34,6 +31,11 @@ import {
   relativePayload,
   type AdminFormValues,
 } from '../helpers/admin-employee-form.ts';
+import {
+  emptyEducation,
+  emptyExperience,
+  emptyRelative,
+} from '../helpers/form-items.ts';
 import { CountryCityFields } from './CountryCityFields.tsx';
 import { EducationCard } from './EducationCard.tsx';
 import {
