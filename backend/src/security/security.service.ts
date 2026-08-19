@@ -11,7 +11,7 @@ import { LoginDto, RegisterDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthResponseDto, AccountResponseDto } from './dto/auth-response.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
-import type { AuthUser } from './strategies/jwt.strategy';
+import { getCurrentUser } from './current-user.store';
 
 type JwtExpiresIn = `${number}${'s' | 'm' | 'h' | 'd'}`;
 
@@ -44,6 +44,8 @@ export class SecurityService {
       'JWT_REFRESH_EXPIRES_IN',
     ) ?? '7d') as JwtExpiresIn;
   }
+
+  // #region PUBLIC API (CONTROLLER ENDPOINTS)
 
   async register(dto: RegisterDto): Promise<ServiceResult<AuthResponseDto>> {
     const existing = await this.prisma.account.findUnique({
@@ -135,7 +137,8 @@ export class SecurityService {
     return ServiceResult.success(await this.issueTokens(account));
   }
 
-  async me(user: AuthUser): Promise<ServiceResult<AccountResponseDto>> {
+  async me(): Promise<ServiceResult<AccountResponseDto>> {
+    const user = getCurrentUser();
     const account = await this.prisma.account.findUnique({
       where: { id: user.id },
     });
@@ -151,6 +154,10 @@ export class SecurityService {
       this.toAccountResponse(account, user.employeeId),
     );
   }
+
+  // #endregion
+
+  // #region PRIVATE HELPERS
 
   private async issueTokens(
     account: AccountAuthFields,
@@ -237,7 +244,11 @@ export class SecurityService {
       'Недействительный токен обновления',
     );
   }
+
+  // #endregion
 }
+
+// #region PRIVATE HELPERS
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -263,3 +274,5 @@ function durationToMs(value: string): number {
       return 7 * 24 * 60 * 60 * 1000;
   }
 }
+
+// #endregion

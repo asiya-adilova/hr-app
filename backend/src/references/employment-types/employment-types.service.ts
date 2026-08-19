@@ -4,13 +4,17 @@ import { ReferenceService } from '../../common/services/reference.service';
 
 @Injectable()
 export class EmploymentTypesService extends ReferenceService {
-  protected readonly notFoundMessage = 'Тип занятости не найден';
-
   constructor(prisma: PrismaService) {
     super(prisma);
   }
 
+  // #region PROTECTED METHODS
+
+  protected readonly notFoundMessage = 'Тип занятости не найден';
+
   protected getDelegate() {
     return this.prisma.employmentType;
   }
+
+  // #endregion
 }

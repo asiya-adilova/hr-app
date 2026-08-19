@@ -9,7 +9,6 @@ import { WorkExperienceResponseDto } from './dto/response/work-experience-respon
 import { CreateWorkExperienceDto } from './dto/request/create-work-experience-request.dto';
 import { UpdateWorkExperienceDto } from './dto/request/update-work-experience-request.dto';
 import type { WorkExperience } from '../../generated/prisma/client';
-import type { AuthUser } from '../security/strategies/jwt.strategy';
 import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
 import { findCityCountryMismatch } from '../common/helpers/find-city-country-mismatch';
 import { findExperienceDatesBeforeBirthError } from '../common/helpers/find-birth-date-order-error';
@@ -21,55 +20,11 @@ export class WorkExperiencesService extends BaseService<
   CreateWorkExperienceDto,
   UpdateWorkExperienceDto
 > {
-  protected readonly notFoundMessage = 'Запись об опыте работы не найдена';
-
   constructor(prisma: PrismaService) {
     super(prisma);
   }
 
-  protected getDelegate() {
-    return this.prisma.workExperience;
-  }
-
-  protected getByIdInclude() {
-    return { position: true, country: true, city: true };
-  }
-
-  protected getDefaultOrderBy() {
-    return { startDate: 'desc' as const };
-  }
-
-  protected toResponse(model: WorkExperience): WorkExperienceResponseDto {
-    return EmployeeMapper.toWorkExperienceResponse(model);
-  }
-
-  protected toCreateData(dto: CreateWorkExperienceDto) {
-    return EmployeeMapper.toWorkExperienceCreateData(dto);
-  }
-
-  protected toUpdateData(dto: UpdateWorkExperienceDto) {
-    return {
-      ...(dto.companyName !== undefined && { companyName: dto.companyName }),
-      ...(dto.positionId !== undefined && { positionId: dto.positionId }),
-      ...(dto.countryId !== undefined && { countryId: dto.countryId }),
-      ...(dto.cityId !== undefined && { cityId: dto.cityId }),
-      ...(dto.startDate !== undefined && {
-        startDate: new Date(dto.startDate),
-      }),
-      ...(dto.isCurrent !== undefined || dto.endDate !== undefined
-        ? {
-            endDate: dto.isCurrent
-              ? null
-              : dto.endDate
-                ? new Date(dto.endDate)
-                : null,
-          }
-        : {}),
-      ...(dto.responsibilities !== undefined && {
-        responsibilities: dto.responsibilities,
-      }),
-    };
-  }
+  // #region PUBLIC API (CONTROLLER ENDPOINTS)
 
   async findByEmployeeId(
     employeeId: number,
@@ -80,9 +35,8 @@ export class WorkExperiencesService extends BaseService<
 
   async listByEmployee(
     employeeId: number,
-    user: AuthUser,
   ): Promise<ServiceResult<WorkExperienceResponseDto[]>> {
-    return this.withEmployeeAccess(employeeId, user, () =>
+    return this.withEmployeeAccess(employeeId, () =>
       super.getAll({ employeeId }),
     );
   }
@@ -90,10 +44,18 @@ export class WorkExperiencesService extends BaseService<
   async getOne(
     employeeId: number,
     id: number,
-    user: AuthUser,
   ): Promise<ServiceResult<WorkExperienceResponseDto>> {
-    return this.withEmployeeAccess(employeeId, user, () =>
+    return this.withEmployeeAccess(employeeId, () =>
       super.getById(id, { employeeId }),
+    );
+  }
+
+  async add(
+    employeeId: number,
+    dto: CreateWorkExperienceDto,
+  ): Promise<ServiceResult<WorkExperienceResponseDto>> {
+    return this.withEmployeeAccess(employeeId, () =>
+      this.create(dto, { employeeId }),
     );
   }
 
@@ -152,18 +114,14 @@ export class WorkExperiencesService extends BaseService<
     id: number,
     dto: UpdateWorkExperienceDto,
     where: Record<string, unknown> = {},
-    user?: AuthUser,
   ): Promise<ServiceResult<WorkExperienceResponseDto>> {
     const employeeId = where.employeeId as number;
-    if (user) {
-      const denied =
-        this.forbiddenUnlessEmployeeOwner<WorkExperienceResponseDto>(
-          employeeId,
-          user,
-        );
-      if (denied) {
-        return denied;
-      }
+    const denied =
+      await this.forbiddenUnlessEmployeeOwner<WorkExperienceResponseDto>(
+        employeeId,
+      );
+    if (denied) {
+      return denied;
     }
     const existing = await this.prisma.workExperience.findFirst({
       where: { id, employeeId },
@@ -222,22 +180,11 @@ export class WorkExperiencesService extends BaseService<
     return updated;
   }
 
-  async add(
-    employeeId: number,
-    dto: CreateWorkExperienceDto,
-    user: AuthUser,
-  ): Promise<ServiceResult<WorkExperienceResponseDto>> {
-    return this.withEmployeeAccess(employeeId, user, () =>
-      this.create(dto, { employeeId }),
-    );
-  }
-
   async replaceAll(
     employeeId: number,
     items: CreateWorkExperienceDto[],
-    user: AuthUser,
   ): Promise<ServiceResult<WorkExperienceResponseDto[]>> {
-    return this.withEmployeeAccess(employeeId, user, async () => {
+    return this.withEmployeeAccess(employeeId, async () => {
       if (hasOverlappingWorkExperiences(items)) {
         return ServiceResult.error(
           ErrorCode.DuplicateData,
@@ -269,9 +216,8 @@ export class WorkExperiencesService extends BaseService<
   async remove(
     employeeId: number,
     id: number,
-    user: AuthUser,
   ): Promise<ServiceResult<void>> {
-    return this.withEmployeeAccess(employeeId, user, async () => {
+    return this.withEmployeeAccess(employeeId, async () => {
       const removed = await super.delete(id, { employeeId });
       if (removed.successful) {
         await syncEmployeeExperience(this.prisma, employeeId);
@@ -279,6 +225,60 @@ export class WorkExperiencesService extends BaseService<
       return removed;
     });
   }
+
+  // #endregion
+
+  // #region PROTECTED METHODS
+
+  protected readonly notFoundMessage = 'Запись об опыте работы не найдена';
+
+  protected getDelegate() {
+    return this.prisma.workExperience;
+  }
+
+  protected getByIdInclude() {
+    return { position: true, country: true, city: true };
+  }
+
+  protected getDefaultOrderBy() {
+    return { startDate: 'desc' as const };
+  }
+
+  protected toResponse(model: WorkExperience): WorkExperienceResponseDto {
+    return EmployeeMapper.toWorkExperienceResponse(model);
+  }
+
+  protected toCreateData(dto: CreateWorkExperienceDto) {
+    return EmployeeMapper.toWorkExperienceCreateData(dto);
+  }
+
+  protected toUpdateData(dto: UpdateWorkExperienceDto) {
+    return {
+      ...(dto.companyName !== undefined && { companyName: dto.companyName }),
+      ...(dto.positionId !== undefined && { positionId: dto.positionId }),
+      ...(dto.countryId !== undefined && { countryId: dto.countryId }),
+      ...(dto.cityId !== undefined && { cityId: dto.cityId }),
+      ...(dto.startDate !== undefined && {
+        startDate: new Date(dto.startDate),
+      }),
+      ...(dto.isCurrent !== undefined || dto.endDate !== undefined
+        ? {
+            endDate: dto.isCurrent
+              ? null
+              : dto.endDate
+                ? new Date(dto.endDate)
+                : null,
+          }
+        : {}),
+      ...(dto.responsibilities !== undefined && {
+        responsibilities: dto.responsibilities,
+      }),
+    };
+  }
+
+  // #endregion
+
+  // #region PRIVATE HELPERS
 
   private async getEmployeeBirthDate(
     employeeId: number,
@@ -333,7 +333,11 @@ export class WorkExperiencesService extends BaseService<
       DUPLICATE_WORK_EXPERIENCE_MESSAGE,
     );
   }
+
+  // #endregion
 }
+
+// #region PRIVATE HELPERS
 
 const DUPLICATE_WORK_EXPERIENCE_MESSAGE =
   'Нельзя указать один и тот же опыт работы несколько раз';
@@ -402,3 +406,5 @@ function hasOverlappingWorkExperiences(items: CreateWorkExperienceDto[]) {
 
   return false;
 }
+
+// #endregion

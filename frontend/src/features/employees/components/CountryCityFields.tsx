@@ -16,7 +16,7 @@ type CountryCityFieldsProps = {
   onChange: (next: { countryId: string; cityId: string }) => void;
 };
 
-export function cityOptionsForCountry(cities: CityItem[], countryId: string) {
+function cityOptionsForCountry(cities: CityItem[], countryId: string) {
   return cities
     .filter((city) => String(city.countryId) === countryId)
     .map((city) => ({ value: city.id, label: city.name }));

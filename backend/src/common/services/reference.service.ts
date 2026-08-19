@@ -8,6 +8,8 @@ export abstract class ReferenceService extends BaseService<
   NamedReference,
   ReferenceResponseDto
 > {
+  // #region PROTECTED METHODS
+
   protected toResponse(model: NamedReference): ReferenceResponseDto {
     return {
       id: model.id,
@@ -18,4 +20,6 @@ export abstract class ReferenceService extends BaseService<
   protected getDefaultOrderBy() {
     return { name: 'asc' as const };
   }
+
+  // #endregion
 }

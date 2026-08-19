@@ -1,4 +1,4 @@
-export type ApiErrorPayload = {
+type ApiErrorPayload = {
   code?: number;
   message?: string;
   validationErrors?: string[] | Record<string, string[]>;

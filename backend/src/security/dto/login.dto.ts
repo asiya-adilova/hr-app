@@ -9,10 +9,10 @@ import {
   MinLength,
 } from 'class-validator';
 
-export const PASSWORD_PATTERN =
+const PASSWORD_PATTERN =
   /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
-export const PASSWORD_REQUIREMENTS_MESSAGE =
+const PASSWORD_REQUIREMENTS_MESSAGE =
   'Пароль должен содержать минимум 8 символов, включая буквы, цифры и спецсимволы';
 
 export class LoginDto {

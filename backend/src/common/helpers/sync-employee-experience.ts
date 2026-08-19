@@ -14,7 +14,7 @@ function normalizeName(value: string): string {
   return value.trim().toLowerCase();
 }
 
-export function sumExperienceMonths(
+function sumExperienceMonths(
   items: Array<{
     startDate: Date;
     endDate: Date | null;

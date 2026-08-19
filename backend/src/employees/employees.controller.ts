@@ -32,8 +32,6 @@ import { WorkExperienceResponseDto } from '../work-experiences/dto/response/work
 import { Auth } from '../security/decorators/auth.decorator';
 import { Roles } from '../security/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
-import { CurrentUser } from '../security/decorators/current-user.decorator';
-import type { AuthUser } from '../security/strategies/jwt.strategy';
 
 @ApiTags('Employees')
 @Auth()
@@ -83,11 +81,8 @@ export class EmployeesController {
   @ApiOperation({ summary: 'Получить сотрудника по идентификатору' })
   @ApiParam({ name: 'id', type: Number })
   @ApiDataResponse(EmployeeDetailsResponseDto)
-  async getById(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: AuthUser,
-  ) {
-    const result = await this.employeesService.getById(id, {}, user);
+  async getById(@Param('id', ParseIntPipe) id: number) {
+    const result = await this.employeesService.getById(id);
 
     return toApiResponse(result);
   }
@@ -96,10 +91,8 @@ export class EmployeesController {
   @ApiOperation({ summary: 'Создать сотрудника' })
   @ApiBody({ type: CreateEmployeeDto })
   @ApiDataResponse(EmployeeDetailsResponseDto)
-  async create(@Body() dto: CreateEmployeeDto, @CurrentUser() user: AuthUser) {
-    const payload =
-      user.role === Role.ADMIN ? dto : { ...dto, accountId: user.id };
-    const result = await this.employeesService.create(payload);
+  async create(@Body() dto: CreateEmployeeDto) {
+    const result = await this.employeesService.create(dto);
 
     return toApiResponse(result);
   }
@@ -112,9 +105,8 @@ export class EmployeesController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateEmployeeDto,
-    @CurrentUser() user: AuthUser,
   ) {
-    const result = await this.employeesService.update(id, dto, {}, user);
+    const result = await this.employeesService.update(id, dto);
 
     return toApiResponse(result);
   }

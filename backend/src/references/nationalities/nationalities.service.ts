@@ -4,13 +4,17 @@ import { ReferenceService } from '../../common/services/reference.service';
 
 @Injectable()
 export class NationalitiesService extends ReferenceService {
-  protected readonly notFoundMessage = 'Национальность не найдена';
-
   constructor(prisma: PrismaService) {
     super(prisma);
   }
 
+  // #region PROTECTED METHODS
+
+  protected readonly notFoundMessage = 'Национальность не найдена';
+
   protected getDelegate() {
     return this.prisma.nationality;
   }
+
+  // #endregion
 }

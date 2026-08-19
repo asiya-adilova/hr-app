@@ -15,7 +15,7 @@ export const MONTH_LABELS = [
   'Декабрь',
 ];
 
-export function toIsoDate(year: number, month: number, day: number): string {
+function toIsoDate(year: number, month: number, day: number): string {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
@@ -37,7 +37,7 @@ export function yearFromIsoDate(value?: string): number | undefined {
   return Number.isFinite(year) ? year : undefined;
 }
 
-export function currentCalendarYear(): number {
+function currentCalendarYear(): number {
   return new Date().getFullYear();
 }
 

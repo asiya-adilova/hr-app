@@ -16,8 +16,6 @@ import { RelativeResponseDto } from './dto/response/relative-response.dto';
 import { toApiResponse } from '../common/response/service-result-mapper';
 import { ApiDataResponse } from '../common/swagger/api-data-response';
 import { Auth } from '../security/decorators/auth.decorator';
-import { CurrentUser } from '../security/decorators/current-user.decorator';
-import type { AuthUser } from '../security/strategies/jwt.strategy';
 
 @ApiTags('Relatives')
 @Auth()
@@ -29,11 +27,8 @@ export class RelativesController {
   @ApiOperation({ summary: 'Список родственников сотрудника' })
   @ApiParam({ name: 'employeeId', type: Number })
   @ApiDataResponse(RelativeResponseDto, { isArray: true })
-  async getAll(
-    @Param('employeeId', ParseIntPipe) employeeId: number,
-    @CurrentUser() user: AuthUser,
-  ) {
-    const result = await this.relativesService.listByEmployee(employeeId, user);
+  async getAll(@Param('employeeId', ParseIntPipe) employeeId: number) {
+    const result = await this.relativesService.listByEmployee(employeeId);
 
     return toApiResponse(result);
   }
@@ -46,9 +41,8 @@ export class RelativesController {
   async getById(
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: AuthUser,
   ) {
-    const result = await this.relativesService.getOne(employeeId, id, user);
+    const result = await this.relativesService.getOne(employeeId, id);
 
     return toApiResponse(result);
   }
@@ -61,9 +55,8 @@ export class RelativesController {
   async create(
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Body() dto: CreateRelativeDto,
-    @CurrentUser() user: AuthUser,
   ) {
-    const result = await this.relativesService.add(employeeId, dto, user);
+    const result = await this.relativesService.add(employeeId, dto);
 
     return toApiResponse(result);
   }
@@ -78,14 +71,8 @@ export class RelativesController {
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateRelativeDto,
-    @CurrentUser() user: AuthUser,
   ) {
-    const result = await this.relativesService.update(
-      id,
-      dto,
-      { employeeId },
-      user,
-    );
+    const result = await this.relativesService.update(id, dto, { employeeId });
 
     return toApiResponse(result);
   }
@@ -97,9 +84,8 @@ export class RelativesController {
   async delete(
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: AuthUser,
   ) {
-    const result = await this.relativesService.remove(employeeId, id, user);
+    const result = await this.relativesService.remove(employeeId, id);
 
     return toApiResponse(result);
   }

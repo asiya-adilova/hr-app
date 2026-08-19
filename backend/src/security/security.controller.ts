@@ -5,9 +5,7 @@ import { LoginDto, RegisterDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AccountResponseDto, AuthResponseDto } from './dto/auth-response.dto';
 import { Public } from './decorators/public.decorator';
-import { CurrentUser } from './decorators/current-user.decorator';
 import { Auth } from './decorators/auth.decorator';
-import type { AuthUser } from './strategies/jwt.strategy';
 import { toApiResponse } from '../common/response/service-result-mapper';
 import { ApiDataResponse } from '../common/swagger/api-data-response';
 
@@ -47,7 +45,7 @@ export class SecurityController {
   @Get('me')
   @ApiOperation({ summary: 'Текущий аккаунт' })
   @ApiDataResponse(AccountResponseDto)
-  async me(@CurrentUser() user: AuthUser) {
-    return toApiResponse(await this.securityService.me(user));
+  async me() {
+    return toApiResponse(await this.securityService.me());
   }
 }

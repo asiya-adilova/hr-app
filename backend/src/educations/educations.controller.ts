@@ -17,8 +17,6 @@ import { EducationResponseDto } from './dto/response/education-response.dto';
 import { toApiResponse } from '../common/response/service-result-mapper';
 import { ApiDataResponse } from '../common/swagger/api-data-response';
 import { Auth } from '../security/decorators/auth.decorator';
-import { CurrentUser } from '../security/decorators/current-user.decorator';
-import type { AuthUser } from '../security/strategies/jwt.strategy';
 
 @ApiTags('Educations')
 @Auth()
@@ -30,14 +28,8 @@ export class EducationsController {
   @ApiOperation({ summary: 'Список образований сотрудника' })
   @ApiParam({ name: 'employeeId', type: Number })
   @ApiDataResponse(EducationResponseDto, { isArray: true })
-  async getAll(
-    @Param('employeeId', ParseIntPipe) employeeId: number,
-    @CurrentUser() user: AuthUser,
-  ) {
-    const result = await this.educationsService.listByEmployee(
-      employeeId,
-      user,
-    );
+  async getAll(@Param('employeeId', ParseIntPipe) employeeId: number) {
+    const result = await this.educationsService.listByEmployee(employeeId);
 
     return toApiResponse(result);
   }
@@ -50,9 +42,8 @@ export class EducationsController {
   async getById(
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: AuthUser,
   ) {
-    const result = await this.educationsService.getOne(employeeId, id, user);
+    const result = await this.educationsService.getOne(employeeId, id);
 
     return toApiResponse(result);
   }
@@ -65,9 +56,8 @@ export class EducationsController {
   async create(
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Body() dto: CreateEducationDto,
-    @CurrentUser() user: AuthUser,
   ) {
-    const result = await this.educationsService.add(employeeId, dto, user);
+    const result = await this.educationsService.add(employeeId, dto);
 
     return toApiResponse(result);
   }
@@ -80,12 +70,10 @@ export class EducationsController {
   async replaceAll(
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Body() dto: ReplaceEducationsDto,
-    @CurrentUser() user: AuthUser,
   ) {
     const result = await this.educationsService.replaceAll(
       employeeId,
       dto.items,
-      user,
     );
 
     return toApiResponse(result);
@@ -101,14 +89,8 @@ export class EducationsController {
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateEducationDto,
-    @CurrentUser() user: AuthUser,
   ) {
-    const result = await this.educationsService.update(
-      id,
-      dto,
-      { employeeId },
-      user,
-    );
+    const result = await this.educationsService.update(id, dto, { employeeId });
 
     return toApiResponse(result);
   }
@@ -120,9 +102,8 @@ export class EducationsController {
   async delete(
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: AuthUser,
   ) {
-    const result = await this.educationsService.remove(employeeId, id, user);
+    const result = await this.educationsService.remove(employeeId, id);
 
     return toApiResponse(result);
   }

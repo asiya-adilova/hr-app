@@ -11,11 +11,13 @@ type CityRecord = {
 
 @Injectable()
 export class CitiesService extends BaseService<CityRecord, CityResponseDto> {
-  protected readonly notFoundMessage = 'Город не найден';
-
   constructor(prisma: PrismaService) {
     super(prisma);
   }
+
+  // #region PROTECTED METHODS
+
+  protected readonly notFoundMessage = 'Город не найден';
 
   protected getDelegate() {
     return this.prisma.city;
@@ -32,4 +34,6 @@ export class CitiesService extends BaseService<CityRecord, CityResponseDto> {
   protected getDefaultOrderBy() {
     return { name: 'asc' as const };
   }
+
+  // #endregion
 }

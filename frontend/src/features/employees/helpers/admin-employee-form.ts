@@ -46,7 +46,7 @@ export type AdminFormValues = {
   relatives: RelativeCardItem[];
 };
 
-export function nextItemKey() {
+function nextItemKey() {
   return `item-${crypto.randomUUID()}`;
 }
 

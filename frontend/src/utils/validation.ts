@@ -50,10 +50,6 @@ export function isBirthDateAllowed(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) && value <= BIRTH_DATE_MAX;
 }
 
-export function isPassportExpired(expireDate: string): boolean {
-  return expireDate < todayIsoDate();
-}
-
 export function digitsOnly(value: string, maxLength?: number): string {
   const digits = value.replace(/\D/g, '');
   return maxLength ? digits.slice(0, maxLength) : digits;

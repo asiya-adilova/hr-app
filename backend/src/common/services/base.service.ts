@@ -1,9 +1,9 @@
-import { Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ErrorCode } from '../enums/error-code.enum';
 import { Role } from '../enums/role.enum';
 import { PagedResult } from '../response/paged-result';
 import { ServiceResult } from '../response/service-result';
+import { getCurrentUser } from '../../security/current-user.store';
 import type { AuthUser } from '../../security/strategies/jwt.strategy';
 
 export type Identifiable = {
@@ -22,85 +22,9 @@ export abstract class BaseService<
   TUpdate = unknown,
   TListResponse = TResponse,
 > {
-  protected readonly logger = new Logger(this.constructor.name);
-
   protected constructor(protected readonly prisma: PrismaService) {}
 
-  protected abstract readonly notFoundMessage: string;
-
-  protected abstract getDelegate(): any;
-
-  protected abstract toResponse(model: TModel): TResponse;
-
-  protected toCreateData(dto: TCreate): unknown {
-    return dto;
-  }
-
-  protected toUpdateData(dto: TUpdate): unknown {
-    return dto;
-  }
-
-  protected toListResponse(model: TModel): TListResponse {
-    return this.toResponse(model) as unknown as TListResponse;
-  }
-
-  protected getByIdInclude(): unknown {
-    return undefined;
-  }
-
-  protected getListInclude(): unknown {
-    return undefined;
-  }
-
-  protected getDefaultOrderBy(): unknown {
-    return { id: 'desc' };
-  }
-
-  protected isAdmin(user: AuthUser): boolean {
-    return user.role === Role.ADMIN;
-  }
-
-  protected isOwner(
-    objectOwnerId: number | null | undefined,
-    currentUserId: number | null | undefined,
-  ): boolean {
-    if (objectOwnerId == null || currentUserId == null) {
-      return false;
-    }
-
-    return objectOwnerId === currentUserId;
-  }
-
-  protected canAccessEmployee(employeeId: number, user: AuthUser): boolean {
-    return this.isAdmin(user) || this.isOwner(employeeId, user.employeeId);
-  }
-
-  protected forbiddenUnlessEmployeeOwner<T>(
-    employeeId: number,
-    user: AuthUser,
-  ): ServiceResult<T> | null {
-    if (this.canAccessEmployee(employeeId, user)) {
-      return null;
-    }
-
-    return ServiceResult.error(
-      ErrorCode.Forbidden,
-      'Недостаточно прав для доступа к данным этого сотрудника',
-    );
-  }
-
-  protected async withEmployeeAccess<T>(
-    employeeId: number,
-    user: AuthUser,
-    action: () => Promise<ServiceResult<T>>,
-  ): Promise<ServiceResult<T>> {
-    const denied = this.forbiddenUnlessEmployeeOwner<T>(employeeId, user);
-    if (denied) {
-      return denied;
-    }
-
-    return action();
-  }
+  // #region PUBLIC API (CONTROLLER ENDPOINTS)
 
   async getById(
     id: number,
@@ -232,4 +156,103 @@ export abstract class BaseService<
 
     return ServiceResult.success();
   }
+
+  // #endregion
+
+  // #region PROTECTED METHODS
+
+  protected abstract readonly notFoundMessage: string;
+
+  protected abstract getDelegate(): any;
+
+  protected abstract toResponse(model: TModel): TResponse;
+
+  protected toCreateData(dto: TCreate): unknown {
+    return dto;
+  }
+
+  protected toUpdateData(dto: TUpdate): unknown {
+    return dto;
+  }
+
+  protected toListResponse(model: TModel): TListResponse {
+    return this.toResponse(model) as unknown as TListResponse;
+  }
+
+  protected getByIdInclude(): unknown {
+    return undefined;
+  }
+
+  protected getListInclude(): unknown {
+    return undefined;
+  }
+
+  protected getDefaultOrderBy(): unknown {
+    return { id: 'desc' };
+  }
+
+  protected getCurrentUser(): AuthUser {
+    return getCurrentUser();
+  }
+
+  protected isAdmin(): boolean {
+    return this.getCurrentUser().role === Role.ADMIN;
+  }
+
+  protected isOwner(
+    objectOwnerId: number | null | undefined,
+    currentUserId: number | null | undefined,
+  ): boolean {
+    if (objectOwnerId == null || currentUserId == null) {
+      return false;
+    }
+
+    return objectOwnerId === currentUserId;
+  }
+
+  protected async canAccessEmployee(employeeId: number): Promise<boolean> {
+    const user = this.getCurrentUser();
+    if (this.isAdmin() || this.isOwner(employeeId, user.employeeId)) {
+      return true;
+    }
+
+    // Same request as first profile create: JWT still has employeeId = null.
+    if (user.employeeId != null) {
+      return false;
+    }
+
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: employeeId, accountId: user.id },
+      select: { id: true },
+    });
+
+    return employee != null;
+  }
+
+  protected async forbiddenUnlessEmployeeOwner<T>(
+    employeeId: number,
+  ): Promise<ServiceResult<T> | null> {
+    if (await this.canAccessEmployee(employeeId)) {
+      return null;
+    }
+
+    return ServiceResult.error(
+      ErrorCode.Forbidden,
+      'Недостаточно прав для доступа к данным этого сотрудника',
+    );
+  }
+
+  protected async withEmployeeAccess<T>(
+    employeeId: number,
+    action: () => Promise<ServiceResult<T>>,
+  ): Promise<ServiceResult<T>> {
+    const denied = await this.forbiddenUnlessEmployeeOwner<T>(employeeId);
+    if (denied) {
+      return denied;
+    }
+
+    return action();
+  }
+
+  // #endregion
 }

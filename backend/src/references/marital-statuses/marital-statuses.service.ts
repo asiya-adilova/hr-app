@@ -4,13 +4,17 @@ import { ReferenceService } from '../../common/services/reference.service';
 
 @Injectable()
 export class MaritalStatusesService extends ReferenceService {
-  protected readonly notFoundMessage = 'Семейное положение не найдено';
-
   constructor(prisma: PrismaService) {
     super(prisma);
   }
 
+  // #region PROTECTED METHODS
+
+  protected readonly notFoundMessage = 'Семейное положение не найдено';
+
   protected getDelegate() {
     return this.prisma.maritalStatus;
   }
+
+  // #endregion
 }

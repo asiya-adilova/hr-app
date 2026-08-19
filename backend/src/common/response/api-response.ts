@@ -30,14 +30,6 @@ export class ApiResponse<T = null> {
     return new ApiResponse<T>(false, undefined, new ErrorInfo(code, message));
   }
 
-  static notFound<T>(message = 'Не найдено'): ApiResponse<T> {
-    return ApiResponse.error(ErrorCode.NotFound, message);
-  }
-
-  static badRequest<T>(message = 'Некорректный запрос'): ApiResponse<T> {
-    return ApiResponse.error(ErrorCode.BadRequest, message);
-  }
-
   static internalServerError<T>(
     message = 'Внутренняя ошибка сервера',
   ): ApiResponse<T> {

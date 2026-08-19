@@ -15,7 +15,7 @@ import {
   ExpandCardButton,
 } from './form-card-actions.tsx';
 
-export const RELATIONSHIP_OPTIONS = [
+const RELATIONSHIP_OPTIONS = [
   { value: 'Отец', label: 'Отец' },
   { value: 'Мать', label: 'Мать' },
   { value: 'Супруг', label: 'Супруг' },

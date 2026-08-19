@@ -4,13 +4,17 @@ import { ReferenceService } from '../../common/services/reference.service';
 
 @Injectable()
 export class EducationLevelsService extends ReferenceService {
-  protected readonly notFoundMessage = 'Уровень образования не найден';
-
   constructor(prisma: PrismaService) {
     super(prisma);
   }
 
+  // #region PROTECTED METHODS
+
+  protected readonly notFoundMessage = 'Уровень образования не найден';
+
   protected getDelegate() {
     return this.prisma.educationLevel;
   }
+
+  // #endregion
 }

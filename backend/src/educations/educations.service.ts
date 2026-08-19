@@ -9,7 +9,6 @@ import { EducationResponseDto } from './dto/response/education-response.dto';
 import { CreateEducationDto } from './dto/request/create-education-request.dto';
 import { UpdateEducationDto } from './dto/request/update-education-request.dto';
 import type { Education } from '../../generated/prisma/client';
-import type { AuthUser } from '../security/strategies/jwt.strategy';
 import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
 import { findCityCountryMismatch } from '../common/helpers/find-city-country-mismatch';
 import { findGraduationYearBeforeBirthError } from '../common/helpers/find-birth-date-order-error';
@@ -21,48 +20,11 @@ export class EducationsService extends BaseService<
   CreateEducationDto,
   UpdateEducationDto
 > {
-  protected readonly notFoundMessage = 'Запись об образовании не найдена';
-
   constructor(prisma: PrismaService) {
     super(prisma);
   }
 
-  protected getDelegate() {
-    return this.prisma.education;
-  }
-
-  protected getByIdInclude() {
-    return { educationLevel: true, country: true, city: true };
-  }
-
-  protected getDefaultOrderBy() {
-    return { graduationYear: 'desc' as const };
-  }
-
-  protected toResponse(model: Education): EducationResponseDto {
-    return EmployeeMapper.toEducationResponse(model);
-  }
-
-  protected toCreateData(dto: CreateEducationDto) {
-    return EmployeeMapper.toEducationCreateData(dto);
-  }
-
-  protected toUpdateData(dto: UpdateEducationDto) {
-    return {
-      ...(dto.institutionName !== undefined && {
-        institution: dto.institutionName,
-      }),
-      ...(dto.specialty !== undefined && { specialty: dto.specialty }),
-      ...(dto.educationLevelId !== undefined && {
-        educationLevelId: dto.educationLevelId,
-      }),
-      ...(dto.countryId !== undefined && { countryId: dto.countryId }),
-      ...(dto.cityId !== undefined && { cityId: dto.cityId }),
-      ...(dto.graduationYear !== undefined && {
-        graduationYear: dto.graduationYear,
-      }),
-    };
-  }
+  // #region PUBLIC API (CONTROLLER ENDPOINTS)
 
   async findByEmployeeId(employeeId: number): Promise<EducationResponseDto[]> {
     const result = await this.getAll({ employeeId });
@@ -71,9 +33,8 @@ export class EducationsService extends BaseService<
 
   listByEmployee(
     employeeId: number,
-    user: AuthUser,
   ): Promise<ServiceResult<EducationResponseDto[]>> {
-    return this.withEmployeeAccess(employeeId, user, () =>
+    return this.withEmployeeAccess(employeeId, () =>
       super.getAll({ employeeId }),
     );
   }
@@ -81,10 +42,18 @@ export class EducationsService extends BaseService<
   getOne(
     employeeId: number,
     id: number,
-    user: AuthUser,
   ): Promise<ServiceResult<EducationResponseDto>> {
-    return this.withEmployeeAccess(employeeId, user, () =>
+    return this.withEmployeeAccess(employeeId, () =>
       super.getById(id, { employeeId }),
+    );
+  }
+
+  add(
+    employeeId: number,
+    dto: CreateEducationDto,
+  ): Promise<ServiceResult<EducationResponseDto>> {
+    return this.withEmployeeAccess(employeeId, () =>
+      this.create(dto, { employeeId }),
     );
   }
 
@@ -140,17 +109,12 @@ export class EducationsService extends BaseService<
     id: number,
     dto: UpdateEducationDto,
     where: Record<string, unknown> = {},
-    user?: AuthUser,
   ): Promise<ServiceResult<EducationResponseDto>> {
     const employeeId = where.employeeId as number;
-    if (user) {
-      const denied = this.forbiddenUnlessEmployeeOwner<EducationResponseDto>(
-        employeeId,
-        user,
-      );
-      if (denied) {
-        return denied;
-      }
+    const denied =
+      await this.forbiddenUnlessEmployeeOwner<EducationResponseDto>(employeeId);
+    if (denied) {
+      return denied;
     }
     const existing = await this.prisma.education.findFirst({
       where: { id, employeeId },
@@ -199,22 +163,11 @@ export class EducationsService extends BaseService<
     return updated;
   }
 
-  add(
-    employeeId: number,
-    dto: CreateEducationDto,
-    user: AuthUser,
-  ): Promise<ServiceResult<EducationResponseDto>> {
-    return this.withEmployeeAccess(employeeId, user, () =>
-      this.create(dto, { employeeId }),
-    );
-  }
-
   async replaceAll(
     employeeId: number,
     items: CreateEducationDto[],
-    user: AuthUser,
   ): Promise<ServiceResult<EducationResponseDto[]>> {
-    return this.withEmployeeAccess(employeeId, user, async () => {
+    return this.withEmployeeAccess(employeeId, async () => {
       await this.prisma.education.updateMany({
         where: { employeeId, isDeleted: false },
         data: { isDeleted: true, deletedAt: new Date() },
@@ -236,12 +189,8 @@ export class EducationsService extends BaseService<
     });
   }
 
-  remove(
-    employeeId: number,
-    id: number,
-    user: AuthUser,
-  ): Promise<ServiceResult<void>> {
-    return this.withEmployeeAccess(employeeId, user, async () => {
+  remove(employeeId: number, id: number): Promise<ServiceResult<void>> {
+    return this.withEmployeeAccess(employeeId, async () => {
       const removed = await super.delete(id, { employeeId });
       if (removed.successful) {
         await syncEmployeeExperience(this.prisma, employeeId);
@@ -249,6 +198,53 @@ export class EducationsService extends BaseService<
       return removed;
     });
   }
+
+  // #endregion
+
+  // #region PROTECTED METHODS
+
+  protected readonly notFoundMessage = 'Запись об образовании не найдена';
+
+  protected getDelegate() {
+    return this.prisma.education;
+  }
+
+  protected getByIdInclude() {
+    return { educationLevel: true, country: true, city: true };
+  }
+
+  protected getDefaultOrderBy() {
+    return { graduationYear: 'desc' as const };
+  }
+
+  protected toResponse(model: Education): EducationResponseDto {
+    return EmployeeMapper.toEducationResponse(model);
+  }
+
+  protected toCreateData(dto: CreateEducationDto) {
+    return EmployeeMapper.toEducationCreateData(dto);
+  }
+
+  protected toUpdateData(dto: UpdateEducationDto) {
+    return {
+      ...(dto.institutionName !== undefined && {
+        institution: dto.institutionName,
+      }),
+      ...(dto.specialty !== undefined && { specialty: dto.specialty }),
+      ...(dto.educationLevelId !== undefined && {
+        educationLevelId: dto.educationLevelId,
+      }),
+      ...(dto.countryId !== undefined && { countryId: dto.countryId }),
+      ...(dto.cityId !== undefined && { cityId: dto.cityId }),
+      ...(dto.graduationYear !== undefined && {
+        graduationYear: dto.graduationYear,
+      }),
+    };
+  }
+
+  // #endregion
+
+  // #region PRIVATE HELPERS
 
   private async getEmployeeBirthDate(
     employeeId: number,
@@ -290,4 +286,6 @@ export class EducationsService extends BaseService<
       'Запись об образовании с такими данными уже существует',
     );
   }
+
+  // #endregion
 }

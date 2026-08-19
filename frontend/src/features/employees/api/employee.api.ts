@@ -15,12 +15,6 @@ export const employeeApi = {
     return apiRequest<EmployeeDetails>(`/employees/${id}`);
   },
 
-  getAll(pageIndex = 1, pageSize = 20) {
-    return apiRequest<PagedResult<EmployeeTableItem>>(
-      `/employees?pageIndex=${pageIndex}&pageSize=${pageSize}`,
-    );
-  },
-
   filter(filter: EmployeeFilterPayload, pageIndex = 1, pageSize = 20) {
     return apiRequest<PagedResult<EmployeeTableItem>>(
       `/employees/filter?pageIndex=${pageIndex}&pageSize=${pageSize}`,
@@ -46,23 +40,6 @@ export const employeeApi = {
     return apiRequest<void>(`/employees/${id}`, {
       method: 'DELETE',
     });
-  },
-
-  replaceEducations(employeeId: number, items: Array<Omit<EducationItem, 'id'>>) {
-    return apiRequest<EducationItem[]>(`/employees/${employeeId}/educations`, {
-      method: 'PUT',
-      body: { items },
-    });
-  },
-
-  replaceWorkExperiences(
-    employeeId: number,
-    items: Array<Omit<WorkExperienceItem, 'id'>>,
-  ) {
-    return apiRequest<WorkExperienceItem[]>(
-      `/employees/${employeeId}/work-experiences`,
-      { method: 'PUT', body: { items } },
-    );
   },
 
   addEducation(

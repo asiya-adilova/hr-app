@@ -24,7 +24,6 @@ import {
   BaseService,
   type SoftDeletable,
 } from '../common/services/base.service';
-import type { AuthUser } from '../security/strategies/jwt.strategy';
 import { syncEmployeeExperience } from '../common/helpers/sync-employee-experience';
 import {
   findBirthDateOrderError,
@@ -41,8 +40,6 @@ export class EmployeesService extends BaseService<
   UpdateEmployeeDto,
   EmployeeTableResponseDto
 > {
-  protected readonly notFoundMessage = 'Сотрудник не найден';
-
   constructor(
     prisma: PrismaService,
     private readonly educationsService: EducationsService,
@@ -52,116 +49,16 @@ export class EmployeesService extends BaseService<
     super(prisma);
   }
 
-  protected getDelegate() {
-    return this.prisma.employee;
-  }
-
-  protected getByIdInclude() {
-    return employeeLookupInclude;
-  }
-
-  protected getListInclude() {
-    return employeeTableInclude;
-  }
-
-  protected getDefaultOrderBy() {
-    return { createdAt: 'desc' as const };
-  }
-
-  protected toResponse(model: SoftDeletable): EmployeeDetailsResponseDto {
-    return EmployeeMapper.toDetailsResponse(
-      model as unknown as EmployeeWithLookups,
-      {
-        education: [],
-        workExperience: [],
-        relatives: [],
-      },
-    );
-  }
-
-  protected toListResponse(model: SoftDeletable): EmployeeTableResponseDto {
-    return EmployeeMapper.toTableResponse(
-      model as unknown as EmployeeWithTableReferences,
-    );
-  }
-
-  protected toCreateData(dto: CreateEmployeeDto) {
-    return {
-      accountId: dto.accountId,
-      birthDate: new Date(dto.birthDate),
-      pinfl: dto.pinfl,
-      passportSeries: dto.passportSeries,
-      passportNumber: dto.passportNumber,
-      passportExpireDate: new Date(dto.passportExpireDate),
-      passportIssuedBy: dto.passportIssuedBy,
-      phone: dto.phone,
-      address: dto.address,
-      countryId: dto.countryId,
-      cityId: dto.cityId,
-      employeeNumber: dto.employeeNumber ?? `EMP-${dto.accountId}`,
-      hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
-      formStep: dto.formStep ?? 1,
-      genderId: dto.genderId,
-      citizenshipId: dto.citizenshipId,
-      nationalityId: dto.nationalityId,
-      departmentId: dto.departmentId,
-      positionId: dto.positionId,
-      employmentTypeId: dto.employmentTypeId,
-      maritalStatusId: dto.maritalStatusId,
-      driverLicenseCategoryId:
-        dto.hasDriverLicense === false ? null : dto.driverLicenseCategoryId,
-      totalExperienceMonths: 0,
-      specialtyExperienceMonths: 0,
-      militaryService: dto.militaryService ?? false,
-      hasDriverLicense: dto.hasDriverLicense ?? false,
-      additionalInfo: dto.additionalInfo,
-    };
-  }
-
-  protected toUpdateData(dto: UpdateEmployeeDto) {
-    return {
-      accountId: dto.accountId,
-      birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
-      pinfl: dto.pinfl,
-      passportSeries: dto.passportSeries,
-      passportNumber: dto.passportNumber,
-      passportExpireDate: dto.passportExpireDate
-        ? new Date(dto.passportExpireDate)
-        : undefined,
-      passportIssuedBy: dto.passportIssuedBy,
-      phone: dto.phone,
-      address: dto.address,
-      countryId: dto.countryId,
-      cityId: dto.cityId,
-      employeeNumber: dto.employeeNumber,
-      hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
-      formStep: dto.formStep,
-      genderId: dto.genderId,
-      citizenshipId: dto.citizenshipId,
-      nationalityId: dto.nationalityId,
-      departmentId: dto.departmentId,
-      positionId: dto.positionId,
-      employmentTypeId: dto.employmentTypeId,
-      maritalStatusId: dto.maritalStatusId,
-      driverLicenseCategoryId:
-        dto.hasDriverLicense === false ? null : dto.driverLicenseCategoryId,
-      militaryService: dto.militaryService,
-      hasDriverLicense: dto.hasDriverLicense,
-      additionalInfo: dto.additionalInfo,
-    };
-  }
+  // #region PUBLIC API (CONTROLLER ENDPOINTS)
 
   override async getById(
     id: number,
     where: Record<string, unknown> = {},
-    user?: AuthUser,
   ): Promise<ServiceResult<EmployeeDetailsResponseDto>> {
-    if (user) {
-      const denied =
-        this.forbiddenUnlessEmployeeOwner<EmployeeDetailsResponseDto>(id, user);
-      if (denied) {
-        return denied;
-      }
+    const denied =
+      await this.forbiddenUnlessEmployeeOwner<EmployeeDetailsResponseDto>(id);
+    if (denied) {
+      return denied;
     }
 
     const employee = await this.prisma.employee.findFirst({
@@ -225,14 +122,18 @@ export class EmployeesService extends BaseService<
   override async create(
     dto: CreateEmployeeDto,
   ): Promise<ServiceResult<EmployeeDetailsResponseDto>> {
-    const accountError = await this.findAccountError(dto.accountId);
+    const payload = this.isAdmin()
+      ? dto
+      : { ...dto, accountId: this.getCurrentUser().id };
+
+    const accountError = await this.findAccountError(payload.accountId);
     if (accountError) {
       return accountError;
     }
 
     const uniquenessError = await this.findUniquenessError({
-      pinfl: dto.pinfl,
-      employeeNumber: dto.employeeNumber ?? `EMP-${dto.accountId}`,
+      pinfl: payload.pinfl,
+      employeeNumber: payload.employeeNumber ?? `EMP-${payload.accountId}`,
     });
 
     if (uniquenessError) {
@@ -242,44 +143,41 @@ export class EmployeesService extends BaseService<
     const locationError =
       await findCityCountryMismatch<EmployeeDetailsResponseDto>(
         this.prisma,
-        dto.countryId,
-        dto.cityId,
+        payload.countryId,
+        payload.cityId,
       );
     if (locationError) {
       return locationError;
     }
 
     const dateOrderError = findBirthDateOrderError<EmployeeDetailsResponseDto>({
-      birthDate: dto.birthDate,
-      hireDate: dto.hireDate,
-      passportExpireDate: dto.passportExpireDate,
+      birthDate: payload.birthDate,
+      hireDate: payload.hireDate,
+      passportExpireDate: payload.passportExpireDate,
     });
     if (dateOrderError) {
       return dateOrderError;
     }
 
-    return super.create(dto);
+    return super.create(payload);
   }
 
   override async update(
     id: number,
     dto: UpdateEmployeeDto,
     where: Record<string, unknown> = {},
-    user?: AuthUser,
   ): Promise<ServiceResult<EmployeeDetailsResponseDto>> {
-    if (user) {
-      const denied =
-        this.forbiddenUnlessEmployeeOwner<EmployeeDetailsResponseDto>(id, user);
-      if (denied) {
-        return denied;
-      }
+    const denied =
+      await this.forbiddenUnlessEmployeeOwner<EmployeeDetailsResponseDto>(id);
+    if (denied) {
+      return denied;
+    }
 
-      if (dto.accountId !== undefined && !this.isAdmin(user)) {
-        return ServiceResult.error(
-          ErrorCode.Forbidden,
-          'Недостаточно прав для изменения аккаунта сотрудника',
-        );
-      }
+    if (dto.accountId !== undefined && !this.isAdmin()) {
+      return ServiceResult.error(
+        ErrorCode.Forbidden,
+        'Недостаточно прав для изменения аккаунта сотрудника',
+      );
     }
 
     const currentEmployee = await this.prisma.employee.findFirst({
@@ -383,8 +281,117 @@ export class EmployeesService extends BaseService<
     }
 
     await syncEmployeeExperience(this.prisma, id);
-    return this.getById(id, where, user);
+    return this.getById(id, where);
   }
+
+  // #endregion
+
+  // #region PROTECTED METHODS
+
+  protected readonly notFoundMessage = 'Сотрудник не найден';
+
+  protected getDelegate() {
+    return this.prisma.employee;
+  }
+
+  protected getByIdInclude() {
+    return employeeLookupInclude;
+  }
+
+  protected getListInclude() {
+    return employeeTableInclude;
+  }
+
+  protected getDefaultOrderBy() {
+    return { createdAt: 'desc' as const };
+  }
+
+  protected toResponse(model: SoftDeletable): EmployeeDetailsResponseDto {
+    return EmployeeMapper.toDetailsResponse(
+      model as unknown as EmployeeWithLookups,
+      {
+        education: [],
+        workExperience: [],
+        relatives: [],
+      },
+    );
+  }
+
+  protected toListResponse(model: SoftDeletable): EmployeeTableResponseDto {
+    return EmployeeMapper.toTableResponse(
+      model as unknown as EmployeeWithTableReferences,
+    );
+  }
+
+  protected toCreateData(dto: CreateEmployeeDto) {
+    return {
+      accountId: dto.accountId,
+      birthDate: new Date(dto.birthDate),
+      pinfl: dto.pinfl,
+      passportSeries: dto.passportSeries,
+      passportNumber: dto.passportNumber,
+      passportExpireDate: new Date(dto.passportExpireDate),
+      passportIssuedBy: dto.passportIssuedBy,
+      phone: dto.phone,
+      address: dto.address,
+      countryId: dto.countryId,
+      cityId: dto.cityId,
+      employeeNumber: dto.employeeNumber ?? `EMP-${dto.accountId}`,
+      hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
+      formStep: dto.formStep ?? 1,
+      genderId: dto.genderId,
+      citizenshipId: dto.citizenshipId,
+      nationalityId: dto.nationalityId,
+      departmentId: dto.departmentId,
+      positionId: dto.positionId,
+      employmentTypeId: dto.employmentTypeId,
+      maritalStatusId: dto.maritalStatusId,
+      driverLicenseCategoryId:
+        dto.hasDriverLicense === false ? null : dto.driverLicenseCategoryId,
+      totalExperienceMonths: 0,
+      specialtyExperienceMonths: 0,
+      militaryService: dto.militaryService ?? false,
+      hasDriverLicense: dto.hasDriverLicense ?? false,
+      additionalInfo: dto.additionalInfo,
+    };
+  }
+
+  protected toUpdateData(dto: UpdateEmployeeDto) {
+    return {
+      accountId: dto.accountId,
+      birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+      pinfl: dto.pinfl,
+      passportSeries: dto.passportSeries,
+      passportNumber: dto.passportNumber,
+      passportExpireDate: dto.passportExpireDate
+        ? new Date(dto.passportExpireDate)
+        : undefined,
+      passportIssuedBy: dto.passportIssuedBy,
+      phone: dto.phone,
+      address: dto.address,
+      countryId: dto.countryId,
+      cityId: dto.cityId,
+      employeeNumber: dto.employeeNumber,
+      hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
+      formStep: dto.formStep,
+      genderId: dto.genderId,
+      citizenshipId: dto.citizenshipId,
+      nationalityId: dto.nationalityId,
+      departmentId: dto.departmentId,
+      positionId: dto.positionId,
+      employmentTypeId: dto.employmentTypeId,
+      maritalStatusId: dto.maritalStatusId,
+      driverLicenseCategoryId:
+        dto.hasDriverLicense === false ? null : dto.driverLicenseCategoryId,
+      militaryService: dto.militaryService,
+      hasDriverLicense: dto.hasDriverLicense,
+      additionalInfo: dto.additionalInfo,
+    };
+  }
+
+  // #endregion
+
+  // #region PRIVATE HELPERS
 
   private async findUniquenessError(
     fields: {
@@ -685,4 +692,6 @@ export class EmployeesService extends BaseService<
         };
     }
   }
+
+  // #endregion
 }

@@ -9,7 +9,6 @@ import { RelativeResponseDto } from './dto/response/relative-response.dto';
 import { CreateRelativeDto } from './dto/request/create-relative-request.dto';
 import { UpdateRelativeDto } from './dto/request/update-relative-request.dto';
 import type { Relative } from '../../generated/prisma/client';
-import type { AuthUser } from '../security/strategies/jwt.strategy';
 
 @Injectable()
 export class RelativesService extends BaseService<
@@ -18,37 +17,11 @@ export class RelativesService extends BaseService<
   CreateRelativeDto,
   UpdateRelativeDto
 > {
-  protected readonly notFoundMessage = 'Родственник не найден';
-
   constructor(prisma: PrismaService) {
     super(prisma);
   }
 
-  protected getDelegate() {
-    return this.prisma.relative;
-  }
-
-  protected toResponse(model: Relative): RelativeResponseDto {
-    return EmployeeMapper.toRelativeResponse(model);
-  }
-
-  protected toCreateData(dto: CreateRelativeDto) {
-    return EmployeeMapper.toRelativeCreateData(dto);
-  }
-
-  protected toUpdateData(dto: UpdateRelativeDto) {
-    return {
-      ...(dto.fullName !== undefined && { fullName: dto.fullName }),
-      ...(dto.relationshipType !== undefined && {
-        relationship: dto.relationshipType,
-      }),
-      ...(dto.birthDate !== undefined && {
-        birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
-      }),
-      ...(dto.phone !== undefined && { phone: dto.phone }),
-      ...(dto.occupation !== undefined && { workplace: dto.occupation }),
-    };
-  }
+  // #region PUBLIC API (CONTROLLER ENDPOINTS)
 
   async findByEmployeeId(employeeId: number): Promise<RelativeResponseDto[]> {
     const result = await this.getAll({ employeeId });
@@ -57,9 +30,8 @@ export class RelativesService extends BaseService<
 
   async listByEmployee(
     employeeId: number,
-    user: AuthUser,
   ): Promise<ServiceResult<RelativeResponseDto[]>> {
-    return this.withEmployeeAccess(employeeId, user, () =>
+    return this.withEmployeeAccess(employeeId, () =>
       super.getAll({ employeeId }),
     );
   }
@@ -67,10 +39,18 @@ export class RelativesService extends BaseService<
   async getOne(
     employeeId: number,
     id: number,
-    user: AuthUser,
   ): Promise<ServiceResult<RelativeResponseDto>> {
-    return this.withEmployeeAccess(employeeId, user, () =>
+    return this.withEmployeeAccess(employeeId, () =>
       super.getById(id, { employeeId }),
+    );
+  }
+
+  async add(
+    employeeId: number,
+    dto: CreateRelativeDto,
+  ): Promise<ServiceResult<RelativeResponseDto>> {
+    return this.withEmployeeAccess(employeeId, () =>
+      this.create(dto, { employeeId }),
     );
   }
 
@@ -103,17 +83,12 @@ export class RelativesService extends BaseService<
     id: number,
     dto: UpdateRelativeDto,
     where: Record<string, unknown> = {},
-    user?: AuthUser,
   ): Promise<ServiceResult<RelativeResponseDto>> {
     const employeeId = where.employeeId as number;
-    if (user) {
-      const denied = this.forbiddenUnlessEmployeeOwner<RelativeResponseDto>(
-        employeeId,
-        user,
-      );
-      if (denied) {
-        return denied;
-      }
+    const denied =
+      await this.forbiddenUnlessEmployeeOwner<RelativeResponseDto>(employeeId);
+    if (denied) {
+      return denied;
     }
     const existing = await this.prisma.relative.findFirst({
       where: { id, employeeId },
@@ -139,25 +114,47 @@ export class RelativesService extends BaseService<
     return super.update(id, dto, where);
   }
 
-  async add(
-    employeeId: number,
-    dto: CreateRelativeDto,
-    user: AuthUser,
-  ): Promise<ServiceResult<RelativeResponseDto>> {
-    return this.withEmployeeAccess(employeeId, user, () =>
-      this.create(dto, { employeeId }),
-    );
-  }
-
-  async remove(
-    employeeId: number,
-    id: number,
-    user: AuthUser,
-  ): Promise<ServiceResult<void>> {
-    return this.withEmployeeAccess(employeeId, user, () =>
+  async remove(employeeId: number, id: number): Promise<ServiceResult<void>> {
+    return this.withEmployeeAccess(employeeId, () =>
       super.delete(id, { employeeId }),
     );
   }
+
+  // #endregion
+
+  // #region PROTECTED METHODS
+
+  protected readonly notFoundMessage = 'Родственник не найден';
+
+  protected getDelegate() {
+    return this.prisma.relative;
+  }
+
+  protected toResponse(model: Relative): RelativeResponseDto {
+    return EmployeeMapper.toRelativeResponse(model);
+  }
+
+  protected toCreateData(dto: CreateRelativeDto) {
+    return EmployeeMapper.toRelativeCreateData(dto);
+  }
+
+  protected toUpdateData(dto: UpdateRelativeDto) {
+    return {
+      ...(dto.fullName !== undefined && { fullName: dto.fullName }),
+      ...(dto.relationshipType !== undefined && {
+        relationship: dto.relationshipType,
+      }),
+      ...(dto.birthDate !== undefined && {
+        birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
+      }),
+      ...(dto.phone !== undefined && { phone: dto.phone }),
+      ...(dto.occupation !== undefined && { workplace: dto.occupation }),
+    };
+  }
+
+  // #endregion
+
+  // #region PRIVATE HELPERS
 
   private async findUniquenessError(
     employeeId: number,
@@ -185,4 +182,6 @@ export class RelativesService extends BaseService<
       'Родственник с такими данными уже существует',
     );
   }
+
+  // #endregion
 }
