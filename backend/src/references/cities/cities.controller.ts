@@ -12,11 +12,15 @@ import { Auth } from '../../security/decorators/auth.decorator';
 export class CitiesController {
   constructor(private readonly citiesService: CitiesService) {}
 
-  @Get()
+  @Get('search')
   @ApiOperation({ summary: 'Список городов' })
-  @ApiQuery({ name: 'search', required: false, description: 'Поиск по названию' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Поиск по названию',
+  })
   @ApiDataResponse(CityResponseDto, { isArray: true })
-  async getAll(@Query('search') search?: string) {
+  async search(@Query('search') search?: string) {
     return toApiResponse(await this.citiesService.search(search));
   }
 

@@ -15,6 +15,10 @@ import {
   findExperienceDatesBeforeBirthError,
   getEmployeeBirthDate,
 } from '../common/helpers/find-birth-date-order-error';
+import {
+  localTodayIsoDate,
+  toIsoDateKey,
+} from '../common/validators/date.validators';
 
 @Injectable()
 export class WorkExperiencesService extends BaseService<
@@ -169,10 +173,10 @@ export class WorkExperiencesService extends BaseService<
     items: CreateWorkExperienceDto[],
   ): Promise<ServiceResult<WorkExperienceResponseDto[]>> {
     return this.withEmployeeAccess(employeeId, async () => {
-      if (hasOverlappingWorkExperiences(items)) {
+      if (this.hasOverlappingWorkExperiences(items)) {
         return ServiceResult.error(
           ErrorCode.DuplicateData,
-          DUPLICATE_WORK_EXPERIENCE_MESSAGE,
+          ErrorMessage.duplicateWorkExperience,
         );
       }
 
@@ -267,7 +271,7 @@ export class WorkExperiencesService extends BaseService<
     const startKey = toIsoDateKey(fields.startDate);
     const endKey = toIsoDateKey(fields.endDate) || localTodayIsoDate();
     const duplicate = candidates.find((item) =>
-      periodsOverlap(
+      this.periodsOverlap(
         { startDate: startKey, endDate: endKey },
         {
           startDate: toIsoDateKey(item.startDate),
@@ -282,84 +286,61 @@ export class WorkExperiencesService extends BaseService<
 
     return ServiceResult.error(
       ErrorCode.DuplicateData,
-      DUPLICATE_WORK_EXPERIENCE_MESSAGE,
+      ErrorMessage.duplicateWorkExperience,
     );
+  }
+
+  private experienceRange(item: {
+    startDate: string | Date;
+    endDate?: string | Date | null;
+    isCurrent?: boolean;
+  }) {
+    return {
+      startDate: toIsoDateKey(item.startDate),
+      endDate:
+        item.isCurrent || !item.endDate
+          ? localTodayIsoDate()
+          : toIsoDateKey(item.endDate),
+    };
+  }
+
+  private periodsOverlap(
+    first: { startDate: string; endDate: string },
+    second: { startDate: string; endDate: string },
+  ) {
+    return (
+      first.startDate <= second.endDate && second.startDate <= first.endDate
+    );
+  }
+
+  private isSameWorkExperienceRole(
+    first: { companyName: string; positionId: number },
+    second: { companyName: string; positionId: number },
+  ) {
+    return (
+      first.companyName.trim().toLowerCase() ===
+        second.companyName.trim().toLowerCase() &&
+      first.positionId === second.positionId
+    );
+  }
+
+  private hasOverlappingWorkExperiences(items: CreateWorkExperienceDto[]) {
+    for (let first = 0; first < items.length; first += 1) {
+      for (let second = first + 1; second < items.length; second += 1) {
+        if (
+          this.isSameWorkExperienceRole(items[first], items[second]) &&
+          this.periodsOverlap(
+            this.experienceRange(items[first]),
+            this.experienceRange(items[second]),
+          )
+        ) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   // #endregion
 }
-
-// #region PRIVATE HELPERS
-
-const DUPLICATE_WORK_EXPERIENCE_MESSAGE =
-  'Нельзя указать один и тот же опыт работы несколько раз';
-
-function localTodayIsoDate() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function toIsoDateKey(value: string | Date | null | undefined) {
-  if (!value) {
-    return '';
-  }
-  if (typeof value === 'string') {
-    return value.slice(0, 10);
-  }
-  return value.toISOString().slice(0, 10);
-}
-
-function experienceRange(item: {
-  startDate: string | Date;
-  endDate?: string | Date | null;
-  isCurrent?: boolean;
-}) {
-  return {
-    startDate: toIsoDateKey(item.startDate),
-    endDate:
-      item.isCurrent || !item.endDate
-        ? localTodayIsoDate()
-        : toIsoDateKey(item.endDate),
-  };
-}
-
-function periodsOverlap(
-  first: { startDate: string; endDate: string },
-  second: { startDate: string; endDate: string },
-) {
-  return first.startDate <= second.endDate && second.startDate <= first.endDate;
-}
-
-function isSameWorkExperienceRole(
-  first: { companyName: string; positionId: number },
-  second: { companyName: string; positionId: number },
-) {
-  return (
-    first.companyName.trim().toLowerCase() ===
-      second.companyName.trim().toLowerCase() &&
-    first.positionId === second.positionId
-  );
-}
-
-function hasOverlappingWorkExperiences(items: CreateWorkExperienceDto[]) {
-  for (let first = 0; first < items.length; first += 1) {
-    for (let second = first + 1; second < items.length; second += 1) {
-      if (
-        isSameWorkExperienceRole(items[first], items[second]) &&
-        periodsOverlap(
-          experienceRange(items[first]),
-          experienceRange(items[second]),
-        )
-      ) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-// #endregion

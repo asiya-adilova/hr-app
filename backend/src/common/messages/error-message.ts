@@ -4,6 +4,8 @@ export const ErrorMessage = {
   accountNotFound: 'Аккаунт не найден',
   educationNotFound: 'Запись об образовании не найдена',
   workExperienceNotFound: 'Запись об опыте работы не найдена',
+  duplicateWorkExperience:
+    'Нельзя указать один и тот же опыт работы несколько раз',
   relativeNotFound: 'Родственник не найден',
   cityNotFound: 'Город не найден',
   employeeAccessDenied:

@@ -12,11 +12,15 @@ import { Auth } from '../../security/decorators/auth.decorator';
 export class PositionsController {
   constructor(private readonly positionsService: PositionsService) {}
 
-  @Get()
+  @Get('search')
   @ApiOperation({ summary: 'Список должностей' })
-  @ApiQuery({ name: 'search', required: false, description: 'Поиск по названию' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Поиск по названию',
+  })
   @ApiDataResponse(ReferenceResponseDto, { isArray: true })
-  async getAll(@Query('search') search?: string) {
+  async search(@Query('search') search?: string) {
     return toApiResponse(await this.positionsService.search(search));
   }
 

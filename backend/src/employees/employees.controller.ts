@@ -46,19 +46,6 @@ import { Role } from '../common/enums/role.enum';
 export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
 
-  @Get()
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Список сотрудников' })
-  @ApiDataResponse(EmployeeTableResponseDto, { paged: true })
-  async getAll(@Query() pagination: PaginationDto) {
-    const result = await this.employeesService.getAllPaged(
-      pagination.pageSize,
-      pagination.pageIndex,
-    );
-
-    return toApiResponse(result);
-  }
-
   @Post('filter')
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Фильтрация сотрудников' })

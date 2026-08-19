@@ -109,7 +109,7 @@ export class SecurityService {
     }
 
     const stored = await this.prisma.refreshToken.findUnique({
-      where: { tokenHash: hashToken(dto.refreshToken) },
+      where: { tokenHash: this.hashToken(dto.refreshToken) },
     });
 
     if (
@@ -188,8 +188,10 @@ export class SecurityService {
     await this.prisma.refreshToken.create({
       data: {
         accountId: account.id,
-        tokenHash: hashToken(refreshToken),
-        expiresAt: new Date(Date.now() + durationToMs(this.refreshExpiresIn)),
+        tokenHash: this.hashToken(refreshToken),
+        expiresAt: new Date(
+          Date.now() + this.durationToMs(this.refreshExpiresIn),
+        ),
       },
     });
 
@@ -245,34 +247,30 @@ export class SecurityService {
     );
   }
 
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private durationToMs(value: string): number {
+    const match = /^(\d+)([smhd])$/.exec(value.trim());
+    if (!match) {
+      return 7 * 24 * 60 * 60 * 1000;
+    }
+
+    const amount = Number(match[1]);
+    switch (match[2]) {
+      case 's':
+        return amount * 1000;
+      case 'm':
+        return amount * 60 * 1000;
+      case 'h':
+        return amount * 60 * 60 * 1000;
+      case 'd':
+        return amount * 24 * 60 * 60 * 1000;
+      default:
+        return 7 * 24 * 60 * 60 * 1000;
+    }
+  }
+
   // #endregion
 }
-
-// #region PRIVATE HELPERS
-
-function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
-}
-
-function durationToMs(value: string): number {
-  const match = /^(\d+)([smhd])$/.exec(value.trim());
-  if (!match) {
-    return 7 * 24 * 60 * 60 * 1000;
-  }
-
-  const amount = Number(match[1]);
-  switch (match[2]) {
-    case 's':
-      return amount * 1000;
-    case 'm':
-      return amount * 60 * 1000;
-    case 'h':
-      return amount * 60 * 60 * 1000;
-    case 'd':
-      return amount * 24 * 60 * 60 * 1000;
-    default:
-      return 7 * 24 * 60 * 60 * 1000;
-  }
-}
-
-// #endregion

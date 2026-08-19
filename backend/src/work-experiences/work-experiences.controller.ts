@@ -62,7 +62,9 @@ export class WorkExperiencesController {
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Body() dto: CreateWorkExperienceDto,
   ) {
-    const result = await this.workExperiencesService.create(dto, { employeeId });
+    const result = await this.workExperiencesService.create(dto, {
+      employeeId,
+    });
 
     return toApiResponse(result);
   }

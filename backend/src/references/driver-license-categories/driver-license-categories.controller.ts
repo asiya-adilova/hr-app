@@ -14,11 +14,15 @@ export class DriverLicenseCategoriesController {
     private readonly driverLicenseCategoriesService: DriverLicenseCategoriesService,
   ) {}
 
-  @Get()
+  @Get('search')
   @ApiOperation({ summary: 'Список категорий водительских прав' })
-  @ApiQuery({ name: 'search', required: false, description: 'Поиск по названию' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Поиск по названию',
+  })
   @ApiDataResponse(ReferenceResponseDto, { isArray: true })
-  async getAll(@Query('search') search?: string) {
+  async search(@Query('search') search?: string) {
     return toApiResponse(
       await this.driverLicenseCategoriesService.search(search),
     );

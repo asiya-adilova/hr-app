@@ -16,6 +16,22 @@ function toDateOnly(value: Date | string): string {
   return value.toISOString().slice(0, 10);
 }
 
+export function toIsoDateKey(value: string | Date | null | undefined): string {
+  if (value == null || value === '') {
+    return '';
+  }
+
+  return toDateOnly(value);
+}
+
+export function localTodayIsoDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function isDateBefore(
   value: Date | string | null | undefined,
   minDate: Date | string | null | undefined,

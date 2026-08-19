@@ -45,9 +45,8 @@ export class RelativesService extends BaseService<
   ): Promise<ServiceResult<RelativeResponseDto>> {
     const employeeId = extra.employeeId as number;
     return this.withEmployeeAccess(employeeId, async () => {
-      const missing = await this.ensureEmployeeExists<RelativeResponseDto>(
-        employeeId,
-      );
+      const missing =
+        await this.ensureEmployeeExists<RelativeResponseDto>(employeeId);
       if (missing) {
         return missing;
       }

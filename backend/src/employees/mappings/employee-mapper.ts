@@ -10,6 +10,8 @@ import { EmployeeTableResponseDto } from '../dto/response/employee-table-respons
 import { EducationResponseDto } from '../../educations/dto/response/education-response.dto';
 import { RelativeResponseDto } from '../../relatives/dto/response/relative-response.dto';
 import { WorkExperienceResponseDto } from '../../work-experiences/dto/response/work-experience-response.dto';
+import { CreateEmployeeDto } from '../dto/request/create-employee-request.dto';
+import { UpdateEmployeeDto } from '../dto/request/update-employee-request.dto';
 
 type NamedReference = {
   id: number;
@@ -395,6 +397,72 @@ export class EmployeeMapper {
       }),
       ...(dto.phone !== undefined && { phone: dto.phone }),
       ...(dto.occupation !== undefined && { workplace: dto.occupation }),
+    };
+  }
+
+  static toEmployeeCreateData(dto: CreateEmployeeDto) {
+    return {
+      accountId: dto.accountId,
+      birthDate: new Date(dto.birthDate),
+      pinfl: dto.pinfl,
+      passportSeries: dto.passportSeries,
+      passportNumber: dto.passportNumber,
+      passportExpireDate: new Date(dto.passportExpireDate),
+      passportIssuedBy: dto.passportIssuedBy,
+      phone: dto.phone,
+      address: dto.address,
+      countryId: dto.countryId,
+      cityId: dto.cityId,
+      employeeNumber: dto.employeeNumber ?? `EMP-${dto.accountId}`,
+      hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
+      formStep: dto.formStep ?? 1,
+      genderId: dto.genderId,
+      citizenshipId: dto.citizenshipId,
+      nationalityId: dto.nationalityId,
+      departmentId: dto.departmentId,
+      positionId: dto.positionId,
+      employmentTypeId: dto.employmentTypeId,
+      maritalStatusId: dto.maritalStatusId,
+      driverLicenseCategoryId:
+        dto.hasDriverLicense === false ? null : dto.driverLicenseCategoryId,
+      totalExperienceMonths: 0,
+      specialtyExperienceMonths: 0,
+      militaryService: dto.militaryService ?? false,
+      hasDriverLicense: dto.hasDriverLicense ?? false,
+      additionalInfo: dto.additionalInfo,
+    };
+  }
+
+  static toEmployeeUpdateData(dto: UpdateEmployeeDto) {
+    return {
+      accountId: dto.accountId,
+      birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+      pinfl: dto.pinfl,
+      passportSeries: dto.passportSeries,
+      passportNumber: dto.passportNumber,
+      passportExpireDate: dto.passportExpireDate
+        ? new Date(dto.passportExpireDate)
+        : undefined,
+      passportIssuedBy: dto.passportIssuedBy,
+      phone: dto.phone,
+      address: dto.address,
+      countryId: dto.countryId,
+      cityId: dto.cityId,
+      employeeNumber: dto.employeeNumber,
+      hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
+      formStep: dto.formStep,
+      genderId: dto.genderId,
+      citizenshipId: dto.citizenshipId,
+      nationalityId: dto.nationalityId,
+      departmentId: dto.departmentId,
+      positionId: dto.positionId,
+      employmentTypeId: dto.employmentTypeId,
+      maritalStatusId: dto.maritalStatusId,
+      driverLicenseCategoryId:
+        dto.hasDriverLicense === false ? null : dto.driverLicenseCategoryId,
+      militaryService: dto.militaryService,
+      hasDriverLicense: dto.hasDriverLicense,
+      additionalInfo: dto.additionalInfo,
     };
   }
 

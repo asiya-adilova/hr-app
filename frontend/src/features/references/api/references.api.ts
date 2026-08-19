@@ -4,7 +4,7 @@ import type { CityItem, ReferenceItem, ReferenceMap } from '../types/references.
 async function getList<T extends ReferenceItem>(path: string, search?: string) {
   const term = search?.trim();
   const query = term ? `?search=${encodeURIComponent(term)}` : '';
-  return apiRequest<T[]>(`${path}${query}`);
+  return apiRequest<T[]>(`${path}/search${query}`);
 }
 
 export const referencesApi = {

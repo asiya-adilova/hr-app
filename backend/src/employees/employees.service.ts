@@ -64,8 +64,8 @@ export class EmployeesService extends BaseService<
 
       if (!employee) {
         return ServiceResult.error(
-          ErrorCode.NotFound,
-          ErrorMessage.employeeNotFound,
+          ErrorCode.Forbidden,
+          ErrorMessage.employeeAccessDenied,
         );
       }
 
@@ -192,8 +192,8 @@ export class EmployeesService extends BaseService<
 
       if (!currentEmployee) {
         return ServiceResult.error(
-          ErrorCode.NotFound,
-          ErrorMessage.employeeNotFound,
+          ErrorCode.Forbidden,
+          ErrorMessage.employeeAccessDenied,
         );
       }
 
@@ -333,69 +333,11 @@ export class EmployeesService extends BaseService<
   }
 
   protected toCreateData(dto: CreateEmployeeDto) {
-    return {
-      accountId: dto.accountId,
-      birthDate: new Date(dto.birthDate),
-      pinfl: dto.pinfl,
-      passportSeries: dto.passportSeries,
-      passportNumber: dto.passportNumber,
-      passportExpireDate: new Date(dto.passportExpireDate),
-      passportIssuedBy: dto.passportIssuedBy,
-      phone: dto.phone,
-      address: dto.address,
-      countryId: dto.countryId,
-      cityId: dto.cityId,
-      employeeNumber: dto.employeeNumber ?? `EMP-${dto.accountId}`,
-      hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
-      formStep: dto.formStep ?? 1,
-      genderId: dto.genderId,
-      citizenshipId: dto.citizenshipId,
-      nationalityId: dto.nationalityId,
-      departmentId: dto.departmentId,
-      positionId: dto.positionId,
-      employmentTypeId: dto.employmentTypeId,
-      maritalStatusId: dto.maritalStatusId,
-      driverLicenseCategoryId:
-        dto.hasDriverLicense === false ? null : dto.driverLicenseCategoryId,
-      totalExperienceMonths: 0,
-      specialtyExperienceMonths: 0,
-      militaryService: dto.militaryService ?? false,
-      hasDriverLicense: dto.hasDriverLicense ?? false,
-      additionalInfo: dto.additionalInfo,
-    };
+    return EmployeeMapper.toEmployeeCreateData(dto);
   }
 
   protected toUpdateData(dto: UpdateEmployeeDto) {
-    return {
-      accountId: dto.accountId,
-      birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
-      pinfl: dto.pinfl,
-      passportSeries: dto.passportSeries,
-      passportNumber: dto.passportNumber,
-      passportExpireDate: dto.passportExpireDate
-        ? new Date(dto.passportExpireDate)
-        : undefined,
-      passportIssuedBy: dto.passportIssuedBy,
-      phone: dto.phone,
-      address: dto.address,
-      countryId: dto.countryId,
-      cityId: dto.cityId,
-      employeeNumber: dto.employeeNumber,
-      hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
-      formStep: dto.formStep,
-      genderId: dto.genderId,
-      citizenshipId: dto.citizenshipId,
-      nationalityId: dto.nationalityId,
-      departmentId: dto.departmentId,
-      positionId: dto.positionId,
-      employmentTypeId: dto.employmentTypeId,
-      maritalStatusId: dto.maritalStatusId,
-      driverLicenseCategoryId:
-        dto.hasDriverLicense === false ? null : dto.driverLicenseCategoryId,
-      militaryService: dto.militaryService,
-      hasDriverLicense: dto.hasDriverLicense,
-      additionalInfo: dto.additionalInfo,
-    };
+    return EmployeeMapper.toEmployeeUpdateData(dto);
   }
 
   // #endregion
